@@ -1,0 +1,46 @@
+name: Job Alert Fisioterapista
+
+on:
+  schedule:
+    # Ogni giorno alle 7:00 UTC (~9:00 ora italiana in estate, 8:00 in inverno)
+    - cron: "0 7 * * *"
+  workflow_dispatch:  # permette anche l'avvio manuale dalla tab "Actions"
+    inputs:
+      send_baseline_email:
+        description: "Invia comunque un'email di test con tutti gli annunci trovati (solo se è il primo avvio in assoluto, cioè state.json è vuoto/assente)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write  # serve per poter salvare state.json aggiornato nel repo
+
+jobs:
+  check-jobs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Installa dipendenze
+        run: pip install -r requirements.txt
+
+      - name: Esegui lo scraper e invia eventuale email
+        env:
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          EMAIL_TO: ${{ secrets.EMAIL_TO }}
+          SEND_BASELINE_EMAIL: ${{ github.event.inputs.send_baseline_email || 'false' }}
+        run: python scraper.py
+
+      - name: Salva lo stato aggiornato nel repo
+        run: |
+          git config user.name "job-alert-bot"
+          git config user.email "actions@github.com"
+          git add state.json
+          git diff --quiet --cached || git commit -m "Aggiorna elenco annunci visti [skip ci]"
+          git push
