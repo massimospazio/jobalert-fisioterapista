@@ -33,9 +33,14 @@ ND = "n.d."  # valore mostrato quando un'informazione non è stata trovata nell'
 
 HEADERS = {
     "User-Agent": (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-        "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
-    )
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/128.0.0.0 Safari/537.36"
+    ),
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+    "Accept-Language": "it-IT,it;q=0.9,en-US;q=0.8,en;q=0.7",
+    "Cache-Control": "max-age=0",
+    "Upgrade-Insecure-Requests": "1",
 }
 
 # =============================================================================
@@ -97,8 +102,13 @@ class JobListing:
 
 def fetch_bakeca() -> list[JobListing]:
     url = "https://roma.bakeca.it/annunci/medicina-salute-assistenza/?keyword=fisioterapista"
-    resp = requests.get(url, headers=HEADERS, timeout=TIMEOUT)
+    session = requests.Session()
+    session.headers.update(HEADERS)
+    resp = session.get(url, timeout=TIMEOUT)
     resp.raise_for_status()
+    # ... resto del codice invariato
+
+
     soup = BeautifulSoup(resp.text, "lxml")
 
     results: list[JobListing] = []
@@ -151,8 +161,12 @@ def fetch_bakeca() -> list[JobListing]:
 
 def fetch_lavoro_it() -> list[JobListing]:
     url = "https://www.lavoro.it/roma/fisioterapista/"
-    resp = requests.get(url, headers=HEADERS, timeout=TIMEOUT)
+    session = requests.Session()
+    session.headers.update(HEADERS)
+    resp = session.get(url, timeout=TIMEOUT)
     resp.raise_for_status()
+    # ... resto del codice invariato
+    
     soup = BeautifulSoup(resp.text, "lxml")
 
     results: list[JobListing] = []
