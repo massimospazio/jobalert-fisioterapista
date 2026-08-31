@@ -158,7 +158,16 @@ def main() -> int:
     print(f"Totale annunci individuati: {len(all_listings)}")
 
     if is_first_run:
-        print("Primo avvio: registro gli annunci attuali come baseline.")
+        send_baseline_email = os.environ.get("SEND_BASELINE_EMAIL", "false").lower() == "true"
+
+        if send_baseline_email and all_listings:
+            print(f"Primo avvio con test attivo: invio e-mail con i {len(all_listings)} annunci attuali.")
+            subject = f"🧪 TEST — Baseline: {len(all_listings)} annunci trovati"
+            send_email(subject, all_listings)
+            print("E-mail di test inviata con successo.")
+        else:
+            print("Primo avvio: registro gli annunci attuali come baseline. Nessuna e-mail inviata.")
+
         save_seen_urls({j.key() for j in all_listings})
         return 0
 
