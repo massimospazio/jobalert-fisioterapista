@@ -86,30 +86,6 @@ def fetch_google_news_jobs() -> list[JobListing]:
     return results
 
 
-def fetch_bakeca_rss() -> list[JobListing]:
-    """Legge il feed RSS di Bakeca Roma se disponibile."""
-    url = "https://roma.bakeca.it/rss/offerte-di-lavoro.xml"
-    try:
-        resp = requests.get(url, headers=HEADERS, timeout=TIMEOUT)
-        resp.raise_for_status()
-        root = ET.fromstring(resp.content)
-        results = []
-        for item in root.findall(".//item"):
-            title = item.findtext("title", default="")
-            link = item.findtext("link", default="")
-            if "fisioterapista" in title.lower():
-                results.append(
-                    JobListing(
-                        source="Bakeca (RSS)",
-                        title=title,
-                        url=link,
-                        location="Roma"
-                    )
-                )
-        return results
-    except Exception as e:
-        print(f"[Bakeca RSS] Errore o non disponibile: {e}", file=sys.stderr)
-        return []
 
 
 def load_seen_urls() -> set:
@@ -172,13 +148,12 @@ def send_email(subject: str, new_listings: list[JobListing]) -> None:
 
 
 def main() -> int:
-    print("Avvio ricerca tramite RSS/Google News...")
+    print("Avvio ricerca tramite Google News RSS...")
     seen_urls = load_seen_urls()
     is_first_run = len(seen_urls) == 0
 
-    all_listings = []
-    all_listings.extend(fetch_google_news_jobs())
-    all_listings.extend(fetch_bakeca_rss())
+    # Recupera gli annunci aggregati da Google News
+    all_listings = fetch_google_news_jobs()
 
     print(f"Totale annunci individuati: {len(all_listings)}")
 
