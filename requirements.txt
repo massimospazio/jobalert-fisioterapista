@@ -5,3 +5,4 @@ google-genai
 zenrows
 playwright>=1.40.0
 groq>=0.18.0
+PyYAML>=6.0
