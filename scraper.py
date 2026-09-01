@@ -44,7 +44,7 @@ class JobListing:
 
 
 def fetch_with_playwright(target_url: str) -> str | None:
-    """Scarica la pagina simulando un vero browser Chromium con Playwright (Gratuito)."""
+    """Scarica la pagina simulando un vero browser Chromium con Playwright."""
     try:
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
@@ -64,10 +64,7 @@ def fetch_with_playwright(target_url: str) -> str | None:
 
 
 def fetch_page(target_url: str) -> str | None:
-    """Strategia Ibrida: 
-    1. Prova Playwright.
-    2. Se l'HTML è spoglio (es. Bakeca) o bloccato, passa a ZenRows.
-    """
+    """Strategia Ibrida: Playwright -> Fallback ZenRows."""
     html = fetch_with_playwright(target_url)
 
     if html and len(html) > 3000 and "Access Denied" not in html and "Cloudflare" not in html:
@@ -94,7 +91,7 @@ def fetch_page(target_url: str) -> str | None:
 
 
 def analyze_with_gemini(text_content: str, url: str) -> JobListing | None:
-    """Usa Gemini con gestione del Rate Limit (429) e Retry su 503."""
+    """Usa Gemini con gestione avanzata del Rate Limit."""
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
         print("GEMINI_API_KEY non trovata.", file=sys.stderr)
@@ -110,11 +107,11 @@ def analyze_with_gemini(text_content: str, url: str) -> JobListing | None:
 
     PASSAGGIO 1 (Filtro):
     Verifica se questo testo rappresenta un'OFFERTA DI LAVORO / SELEZIONE / CONCORSO reale per FISIOTERAPISTA a Roma o provincia.
-    Imposta "is_job_offer": false se si tratta di articoli di giornale, cronaca, notizie di infortuni, blog generici o annunci non pertinenti.
+    Imposta "is_job_offer": false se si tratta di articoli, blog, annunci di pulizie, badanti o figure non pertinenti.
 
     PASSAGGIO 2 (Estrazione):
-    Se È una vera offerta di lavoro, imposta "is_job_offer": true ed estrai i dati.
-    Non inventare MAI nulla: se un parametro manca, inserisci rigorosamente "n.d.".
+    Se È una vera offerta per fisioterapista, imposta "is_job_offer": true ed estrai i dati.
+    Non inventare nulla: se un parametro manca, inserisci "n.d.".
 
     Restituisci un JSON con questa struttura esatta:
     {{
@@ -136,10 +133,10 @@ def analyze_with_gemini(text_content: str, url: str) -> JobListing | None:
     }}
     """
 
-    for attempt in range(3):
+    for attempt in range(4):
         try:
             response = client.models.generate_content(
-                model="gemini-3.6-flash",
+                model="gemini-2.5-flash",
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     response_mime_type="application/json",
@@ -158,7 +155,7 @@ def analyze_with_gemini(text_content: str, url: str) -> JobListing | None:
         except Exception as e:
             err_msg = str(e)
             if "429" in err_msg or "RESOURCE_EXHAUSTED" in err_msg:
-                wait_time = 15 * (attempt + 1)
+                wait_time = 20 * (attempt + 1)
                 print(f"   [RATE LIMIT 429]: Quota Gemini superata. Attendo {wait_time} secondi...", file=sys.stderr)
                 time.sleep(wait_time)
                 continue
@@ -172,7 +169,7 @@ def analyze_with_gemini(text_content: str, url: str) -> JobListing | None:
 
 
 def extract_job_urls(html_content: str, base_url: str) -> list[tuple[str, str]]:
-    """Estrae i link specifici degli annunci in base al portale."""
+    """Estrae e pre-filtra i link degli annunci."""
     soup = BeautifulSoup(html_content, "html.parser")
     candidates = []
 
@@ -185,16 +182,17 @@ def extract_job_urls(html_content: str, base_url: str) -> list[tuple[str, str]]:
             href = f"{parsed.scheme}://{parsed.netloc}{href}"
 
         href_lower = href.lower()
+        text_lower = text.lower()
 
+        # Filtro preliminare sulle URL per non sprecare chiamata Gemini
         if "bakeca.it" in base_url:
-            if "/dettaglio/" in href_lower or "fisioterapista" in href_lower:
+            if "/dettaglio/" in href_lower or "fisioterap" in href_lower or "fisioterap" in text_lower:
                 candidates.append((text, href))
         elif "subito.it" in base_url:
             if "/offerte-lavoro/" in href_lower and href_lower.endswith(".htm"):
-                candidates.append((text, href))
-        else:
-            if "fisioterapista" in href_lower or "fisioterapista" in text.lower():
-                candidates.append((text, href))
+                # Pre-filtraggio per escludere badanti/pulizie già dal link
+                if any(k in href_lower for k in ["fisioterap", "riabilitaz", "sanitar", "studio", "clinica"]):
+                    candidates.append((text, href))
 
     return candidates
 
@@ -258,8 +256,8 @@ def build_email_html(new_listings: list[JobListing]) -> str:
 
 
 def send_email(subject: str, new_listings: list[JobListing]) -> None:
-    gmail_user = os.environ.get("GMAIL_USER") or os.environ.get("EMAIL_USER")
-    gmail_app_password = os.environ.get("GMAIL_APP_PASSWORD") or os.environ.get("EMAIL_PASS")
+    gmail_user = os.environ.get("EMAIL_USER") or os.environ.get("GMAIL_USER")
+    gmail_app_password = os.environ.get("EMAIL_PASS") or os.environ.get("GMAIL_APP_PASSWORD")
     email_to = os.environ.get("EMAIL_TO", gmail_user)
 
     if not gmail_user or not gmail_app_password:
@@ -272,9 +270,13 @@ def send_email(subject: str, new_listings: list[JobListing]) -> None:
     msg["To"] = email_to
     msg.attach(MIMEText(build_email_html(new_listings), "html", "utf-8"))
 
-    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
-        server.login(gmail_user, gmail_app_password)
-        server.sendmail(gmail_user, [email_to], msg.as_string())
+    try:
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+            server.login(gmail_user, gmail_app_password)
+            server.sendmail(gmail_user, [email_to], msg.as_string())
+        print(f"E-mail inviata con successo a {email_to}!")
+    except Exception as e:
+        print(f"Errore durante l'invio dell'e-mail: {e}", file=sys.stderr)
 
 
 def main() -> int:
@@ -315,7 +317,7 @@ def main() -> int:
 
         print(f"Trovati {len(valid_candidates)} link di annunci potenziali non ancora visti.")
 
-        for text, url in valid_candidates[:10]:
+        for text, url in valid_candidates[:5]:
             print(f"\n  Scarico dettagli per: {text[:40]}... -> {url}")
             detail_html = fetch_page(url)
 
@@ -329,8 +331,8 @@ def main() -> int:
 
             page_text = soup.get_text(separator=" ", strip=True)
 
-            # Pausa per evitare il Rate Limit 429 di Gemini
-            time.sleep(3)
+            # Pausa di 5 secondi per prevenire il Rate Limit 429
+            time.sleep(5)
 
             print("   Analisi con Gemini in corso...")
             listing = analyze_with_gemini(page_text, url)
