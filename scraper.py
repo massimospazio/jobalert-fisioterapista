@@ -202,7 +202,7 @@ def analyze_with_gemini(text_content: str, url: str) -> JobListing | None:
         except Exception as e:
             err_msg = str(e)
             if "429" in err_msg or "RESOURCE_EXHAUSTED" in err_msg:
-                print(f"   [RATE LIMIT Gemini]: Quota superata. Attivazione fallback euristico locale...", file=sys.stderr)
+                print("   [RATE LIMIT Gemini]: Quota superata. Attivazione fallback euristico locale...", file=sys.stderr)
                 return analyze_with_heuristics(text_content, url)
             elif "503" in err_msg and attempt < 2:
                 time.sleep(3)
@@ -406,11 +406,12 @@ def main() -> int:
                 print("   [SCARTATA]: Non è un'offerta di lavoro valida.")
 
     print(f"\nTotale nuove offerte valide trovate: {len(all_listings)}")
-# Inserisci questo blocco nel main() subito prima del controllo "if is_first_run:"
-if all_listings:
-    preview_path = Path(__file__).parent / "preview.html"
-    preview_path.write_text(build_email_html(all_listings), encoding="utf-8")
-    print(f"\n📄 Anteprima generata con successo: {preview_path.resolve()}")
+
+    if all_listings:
+        preview_path = Path(__file__).parent / "preview.html"
+        preview_path.write_text(build_email_html(all_listings), encoding="utf-8")
+        print(f"\n📄 Anteprima generata con successo: {preview_path.resolve()}")
+
     if is_first_run:
         send_baseline_email = os.environ.get("SEND_BASELINE_EMAIL", "false").lower() == "true"
         if send_baseline_email and all_listings:
