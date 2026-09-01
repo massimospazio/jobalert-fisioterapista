@@ -1,49 +1,8 @@
 from core.config import load_all
 from core.filters import evaluate_filters
-from core.models import JobListing
 from core.scoring import score_job
 from reports.audit import format_console_audit, write_audit
-
-
-def demo_jobs() -> list[JobListing]:
-    return [
-        JobListing(
-            source="DEMO",
-            url="https://example.test/job/1",
-            title="Fisioterapista - tempo indeterminato",
-            company="Centro Riabilitazione Demo",
-            location="Frascati",
-            text="Cerchiamo fisioterapista per struttura riabilitativa. Contratto a tempo indeterminato, full time. Retribuzione indicata.",
-            latitude=41.8067,
-            longitude=12.6813,
-            contract_type="tempo_indeterminato",
-            employment_type="full_time",
-            salary_present=True,
-        ),
-        JobListing(
-            source="DEMO",
-            url="https://example.test/job/2",
-            title="Fisioterapista domiciliare con P.IVA",
-            company="Assistenza Demo",
-            location="Roma",
-            text="Ricerca fisioterapista per assistenza domiciliare ADI con partita IVA.",
-            latitude=41.9028,
-            longitude=12.4964,
-            contract_type="collaborazione",
-            employment_type="part_time",
-            piva_required=True,
-            adi=True,
-        ),
-        JobListing(
-            source="DEMO",
-            url="https://example.test/job/3",
-            title="Fisioterapista offre trattamenti a domicilio",
-            location="Albano Laziale",
-            text="Fisioterapista offre trattamenti e servizio di fisioterapia a domicilio.",
-            latitude=41.7318,
-            longitude=12.6583,
-        ),
-    ]
+from sources.bakeca import collect as collect_bakeca
 
 
 def main() -> None:
@@ -51,25 +10,42 @@ def main() -> None:
     settings = config["settings"]
     filters_config = config["filters"]
     scoring_config = config["scoring"]
+    locations = config["locations"].get("locations", {})
     output_dir = settings.get("audit", {}).get("output_dir", "logs")
+
+    sources = [source for source in config["sources"].get("sources", []) if source.get("enabled")]
+    all_jobs = []
+
+    for source in sources:
+        source_id = source.get("id")
+        print(f"\nRACCOLTA FONTE: {source.get('name', source_id)}")
+        try:
+            if source_id == "bakeca":
+                jobs = collect_bakeca(source, locations)
+            else:
+                print(f"Fonte non ancora implementata: {source_id}")
+                continue
+            print(f"Annunci raccolti: {len(jobs)}")
+            all_jobs.extend(jobs)
+        except Exception as exc:
+            print(f"SOURCE_ERROR {source_id}: {exc}")
 
     included = 0
     excluded = 0
-
-    for job in demo_jobs():
+    for job in all_jobs:
         filter_result = evaluate_filters(job, filters_config)
         score_result = score_job(job, scoring_config, settings) if filter_result.included else None
-
-        if filter_result.included:
-            included += 1
-        else:
-            excluded += 1
+        included += int(filter_result.included)
+        excluded += int(not filter_result.included)
 
         print(format_console_audit(job, filter_result, score_result))
         audit_file = write_audit(job, filter_result, score_result, output_dir)
 
-    print(f"\nDEMO COMPLETATA: {included} inclusi, {excluded} esclusi")
-    print(f"Audit JSONL: {audit_file}")
+    print("\n" + "=" * 72)
+    print(f"RACCOLTI: {len(all_jobs)} | INCLUSI: {included} | ESCLUSI: {excluded}")
+    if all_jobs:
+        print(f"Audit JSONL: {audit_file}")
+    print("=" * 72)
 
 
 if __name__ == "__main__":
