@@ -42,7 +42,7 @@ class JobListing:
 
 
 def fetch_with_zenrows(target_url: str) -> str | None:
-    """Scarica il contenuto HTML della pagina tramite l'API standard di ZenRows."""
+    """Scarica il contenuto HTML abilitando premium_proxy per i siti protetti."""
     zenrows_key = os.environ.get("ZENROWS_KEY", "").strip()
     if not zenrows_key:
         print("ZENROWS_KEY non trovata nei Secret di GitHub!", file=sys.stderr)
@@ -51,7 +51,8 @@ def fetch_with_zenrows(target_url: str) -> str | None:
     params = {
         "apikey": zenrows_key,
         "url": target_url,
-        "js_render": "true"
+        "js_render": "true",
+        "premium_proxy": "true"  # Evita i blocchi/404 da parte dei Cloudflare di Bakeca
     }
 
     try:
@@ -110,8 +111,9 @@ def analyze_with_gemini(text_content: str, url: str) -> JobListing | None:
     """
 
     try:
+        # Usiamo gemini-2.5-flash per massima compatibilità con la v1 dell'SDK google-genai
         response = client.models.generate_content(
-            model="gemini-1.5-flash",
+            model="gemini-2.5-flash",
             contents=prompt,
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
@@ -129,7 +131,6 @@ def analyze_with_gemini(text_content: str, url: str) -> JobListing | None:
     except Exception as e:
         print(f"Errore Gemini per {url}: {e}", file=sys.stderr)
         return None
-
 
 def extract_job_urls(html_content: str, base_url: str) -> list[tuple[str, str]]:
     """Estrae i link specifici degli annunci in base al portale."""
