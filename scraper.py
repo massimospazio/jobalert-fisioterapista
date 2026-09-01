@@ -70,7 +70,6 @@ def fetch_page(target_url: str) -> str | None:
     """
     html = fetch_with_playwright(target_url)
 
-    # Verifica se l'HTML restituito da Playwright contiene contenuti validi
     if html and len(html) > 3000 and "Access Denied" not in html and "Cloudflare" not in html:
         return html
 
@@ -92,7 +91,8 @@ def fetch_page(target_url: str) -> str | None:
     except Exception as e:
         print(f"Errore fallback ZenRows per {target_url}: {e}", file=sys.stderr)
         return None
-        
+
+
 def analyze_with_gemini(text_content: str, url: str) -> JobListing | None:
     """Usa Gemini con gestione del Rate Limit (429) e Retry su 503."""
     api_key = os.environ.get("GEMINI_API_KEY")
@@ -315,7 +315,7 @@ def main() -> int:
 
         print(f"Trovati {len(valid_candidates)} link di annunci potenziali non ancora visti.")
 
-     for text, url in valid_candidates[:10]:
+        for text, url in valid_candidates[:10]:
             print(f"\n  Scarico dettagli per: {text[:40]}... -> {url}")
             detail_html = fetch_page(url)
 
@@ -329,7 +329,7 @@ def main() -> int:
 
             page_text = soup.get_text(separator=" ", strip=True)
 
-            # Pausa per evitare l'errore 429 di Gemini
+            # Pausa per evitare il Rate Limit 429 di Gemini
             time.sleep(3)
 
             print("   Analisi con Gemini in corso...")
