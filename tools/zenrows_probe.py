@@ -24,9 +24,9 @@ def extract_links(html: str) -> list[str]:
 
 
 def main() -> None:
-    apikey = os.environ.get("ZENROWS_API_KEY")
+    apikey = os.environ.get("ZENROWS_KEY")
     if not apikey:
-        raise SystemExit("ZENROWS_API_KEY non configurata")
+        raise SystemExit("ZENROWS_KEY non configurata")
 
     params = {
         "url": BAKECA_URL,
