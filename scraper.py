@@ -50,15 +50,20 @@ class JobListing:
 
 def fetch_with_zenrows(target_url: str) -> str | None:
     """Scarica il contenuto HTML della pagina passando tramite l'API di ZenRows."""
-    zenrows_key = os.environ.get("ZENROWS_KEY")
+    zenrows_key = os.environ.get("ZENROWS_KEY", "").strip()
     if not zenrows_key:
         print("ZENROWS_KEY non trovata nei Secret di GitHub!", file=sys.stderr)
         return None
 
-    api_url = f"https://api.zenrows.com/v1/?key={zenrows_key}&url={quote(target_url)}&js_render=true"
+    # Usiamo la gestione nativa dei parametri di requests per evitare errori di encoding o spazi
+    params = {
+        "key": zenrows_key,
+        "url": target_url,
+        "js_render": "true"
+    }
     
     try:
-        resp = requests.get(api_url, timeout=TIMEOUT)
+        resp = requests.get("https://api.zenrows.com/v1/", params=params, timeout=TIMEOUT)
         resp.raise_for_status()
         return resp.text
     except Exception as e:
