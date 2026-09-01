@@ -79,7 +79,7 @@ def save_state_atomic(seen_urls: set):
 # ==========================================
 
 def fetch_with_playwright(url: str) -> Optional[str]:
-    print(f"  [FETCH Playwright] Apertura browser in corso per: {url}")
+    print(f"  [FETCH Playwright] Apertura browser per: {url}")
     start_time = time.time()
     try:
         with sync_playwright() as p:
@@ -308,7 +308,7 @@ def analyze_with_heuristics(text_content: str, url: str) -> Optional[JobListing]
             return None
 
     if not any(kw in text_lower for kw in ["fisioterapista", "fisioterapia", "riabilitazione"]):
-        print("    [ESITO EURISTICA - SCARTATO]: Nessuna parola chiave (fisioterapista/riabilitazione) trovata nel testo.")
+        print("    [ESITO EURISTICA - SCARTATO]: Nessuna parola chiave trovata nel testo.")
         return None
 
     lines = [l.strip() for l in text_content.splitlines() if len(l.strip()) > 5]
@@ -371,7 +371,7 @@ def send_email_notification(html_content: str, count: int):
         print(f"[EMAIL ERRORE]: {e}")
 
 # ==========================================
-# 5. MAIN (ESECUZIONE E LOGGING DETTAGLIATO)
+# 5. MAIN (ESECUZIONE E LOGGING)
 # ==========================================
 
 def main():
@@ -413,7 +413,7 @@ def main():
             if url in seen_urls:
                 print(f"    - [GIÀ VISTO]: {url}")
             else:
-                print(f"    + [NUOVO CANNIDATO]: {url}")
+                print(f"    + [NUOVO CANDIDATO]: {url}")
                 new_links.append((title, url))
 
         print(f"  [LISTING RISULTATO]: {len(new_links)} nuovi annunci da processare su questo portale.")
@@ -466,6 +466,9 @@ def main():
     print(f"• URL totali esaminati in questo ciclo: {len(candidates_to_process)}")
     print(f"• Offerte di lavoro confermate e valide: {len(valid_listings)}")
 
+    # Controlla la modalità DRY_RUN (default True per test e sicurezza)
+    dry_run = os.getenv("DRY_RUN", "true").lower() == "true"
+
     if valid_listings:
         print("\n--- ELENCO OFFERTE VALIDE TROVATE ---")
         for i, item in enumerate(valid_listings, 1):
@@ -473,12 +476,30 @@ def main():
             print(f"    Azienda: {item.company} | Sede: {item.location} | P.IVA: {item.piva_required}")
             print(f"    URL: {item.url}")
 
+        # 1. Salvataggio Report HTML
         html_report = generate_html_report(valid_listings)
         with open("preview.html", "w", encoding="utf-8") as f:
             f.write(html_report)
-        print("\n Report 'preview.html' generato con successo.")
-        
-        send_email_notification(html_report, len(valid_listings))
+        print("\n Report HTML salvato in: preview.html")
+
+        # 2. Salvataggio Report TXT
+        with open("risultati.txt", "w", encoding="utf-8") as f:
+            f.write(f"--- NUOVE OFFERTE TROVATE ({len(valid_listings)}) ---\n\n")
+            for item in valid_listings:
+                f.write(f"Titolo:  {item.title}\n")
+                f.write(f"Azienda: {item.company}\n")
+                f.write(f"Sede:    {item.location}\n")
+                f.write(f"P.IVA:   {item.piva_required}\n")
+                f.write(f"URL:     {item.url}\n")
+                f.write("-" * 40 + "\n")
+        print(" Report TXT salvato in: risultati.txt")
+
+        # 3. Invio Email o Modalità Test
+        if dry_run:
+            print("\n [MODALITÀ TEST ACTIVE]: Invio e-mail disabilitato (DRY_RUN=true).")
+        else:
+            print("\n Invio e-mail in corso...")
+            send_email_notification(html_report, len(valid_listings))
     else:
         print(" Nessuna nuova offerta valida identificata in questa esecuzione.")
 
