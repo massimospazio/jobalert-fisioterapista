@@ -22,4 +22,6 @@ def load_all() -> dict[str, dict[str, Any]]:
         "settings": load_yaml("settings.yaml"),
         "filters": load_yaml("filters.yaml"),
         "scoring": load_yaml("scoring.yaml"),
+        "sources": load_yaml("sources.yaml"),
+        "locations": load_yaml("locations.yaml"),
     }
