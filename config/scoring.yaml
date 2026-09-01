@@ -1,0 +1,36 @@
+base_score: 50
+
+contract:
+  tempo_indeterminato: 25
+  tempo_determinato: 15
+  collaborazione: 5
+  partita_iva: -12
+  non_specificato: 0
+
+employment:
+  full_time: 12
+  part_time: 6
+  occasionale: -5
+  non_specificato: 0
+
+adi:
+  true: -5
+  false: 0
+
+salary:
+  present: 8
+  absent: 0
+
+distance_km:
+  - max: 10
+    score: 20
+  - max: 20
+    score: 15
+  - max: 30
+    score: 10
+  - max: 50
+    score: 5
+  - max: 80
+    score: -5
+  - max: null
+    score: -15
