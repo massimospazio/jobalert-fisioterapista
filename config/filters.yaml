@@ -7,7 +7,9 @@ positive_keywords:
 negative_keywords:
   - cerco lavoro come
   - offro servizio
+  - offre servizio
   - offro trattamenti
+  - offre trattamenti
   - badante
   - pulizie
 
@@ -21,6 +23,8 @@ exclusion_rules:
     description: Professionista che pubblicizza i propri servizi
     patterns:
       - offro trattamenti
+      - offre trattamenti
       - offro servizio di fisioterapia
+      - offre servizio di fisioterapia
 
 require_positive_match: true
