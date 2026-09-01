@@ -32,7 +32,7 @@ def score_job(job: JobListing, scoring: dict, settings: dict) -> ScoreResult:
     employment_score = int(scoring.get("employment", {}).get(job.employment_type, 0))
     components.append(ScoreComponent("employment", employment_score, job.employment_type))
 
-    adi_score = int(scoring.get("adi", {}).get(str(job.adi).lower(), 0))
+    adi_score = int(scoring.get("adi", {}).get(job.adi, 0))
     components.append(ScoreComponent("adi", adi_score, str(job.adi)))
 
     salary_key = "present" if job.salary_present else "absent"
