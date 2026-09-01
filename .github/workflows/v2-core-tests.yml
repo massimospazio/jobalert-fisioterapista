@@ -19,10 +19,7 @@ jobs:
           python-version: "3.11"
 
       - name: Install v2 dependencies
-        run: pip install "PyYAML>=6.0" requests beautifulsoup4 lxml playwright
-
-      - name: Probe direct HTTP sources
-        run: python tools/http_probe.py
+        run: pip install "PyYAML>=6.0" beautifulsoup4 lxml playwright
 
       - name: Install Chromium
         run: python -m playwright install chromium --with-deps
@@ -39,4 +36,12 @@ jobs:
         with:
           name: v2-core-audit
           path: logs/*.jsonl
+          if-no-files-found: warn
+
+      - name: Upload Bakeca diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bakeca-diagnostics
+          path: diagnostics/*
           if-no-files-found: warn
