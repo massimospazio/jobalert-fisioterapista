@@ -1,0 +1,7 @@
+locations:
+  albano laziale: {latitude: 41.7318, longitude: 12.6583}
+  roma: {latitude: 41.9028, longitude: 12.4964}
+  frascati: {latitude: 41.8067, longitude: 12.6813}
+  grottaferrata: {latitude: 41.7896, longitude: 12.6674}
+  velletri: {latitude: 41.6867, longitude: 12.7778}
+  colleferro: {latitude: 41.7288, longitude: 13.0048}
