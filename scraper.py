@@ -45,25 +45,21 @@ from urllib.parse import quote
 
 import time
 
-def fetch_with_zenrows(target_url: str) -> str | None:
-    """Scarica il contenuto usando requests diretto per Bakeca e ZenRows per Subito.it."""
-    # Fallback diretto per Bakeca (non richiede proxy JS avanzati)
-    if "bakeca.it" in target_url:
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
-        }
-        try:
-            res = requests.get(target_url, headers=headers, timeout=TIMEOUT)
-            res.raise_for_status()
-            return res.text
-        except Exception as e:
-            print(f"Errore download diretto Bakeca per {target_url}: {e}", file=sys.stderr)
-            return None
-
-    # ZenRows standard per Subito.it
+def fetch_page(target_url: str) -> str | None:
+    """Strategia Ibrida: 
+    1. Prova prima con Playwright (Gratis).
+    2. Usa ZenRows solo se Playwright fallisce o viene bloccato.
+    """
+    print(f"Tentativo download gratuito (Playwright): {target_url}")
+    html = fetch_with_playwright(target_url)
+    
+    # Se Playwright ha successo e il contenuto non è un blocco evidente, lo restituisce
+    if html and len(html) > 1000 and "Access Denied" not in html and "Cloudflare" not in html:
+        return html
+        
+    print(f"Playwright non sufficiente. Attivazione fallback ZenRows per: {target_url}")
     zenrows_key = os.environ.get("ZENROWS_KEY", "").strip()
     if not zenrows_key:
-        print("ZENROWS_KEY non trovata nei Secret di GitHub!", file=sys.stderr)
         return None
 
     params = {
@@ -77,7 +73,7 @@ def fetch_with_zenrows(target_url: str) -> str | None:
         response.raise_for_status()
         return response.text
     except Exception as e:
-        print(f"Errore download ZenRows per {target_url}: {e}", file=sys.stderr)
+        print(f"Errore fallback ZenRows per {target_url}: {e}", file=sys.stderr)
         return None
 
 
