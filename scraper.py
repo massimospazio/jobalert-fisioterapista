@@ -43,33 +43,52 @@ class JobListing:
 
 
 def fetch_with_zenrows(target_url: str) -> str | None:
-    """Scarica il contenuto HTML della pagina tramite l'API di ZenRows."""
+    """Scarica il contenuto HTML della pagina tramite l'API di ZenRows utilizzando gli header."""
     zenrows_key = os.environ.get("ZENROWS_KEY", "").strip()
-    
     if not zenrows_key:
         print("ZENROWS_KEY non trovata nei Secret di GitHub!", file=sys.stderr)
         return None
 
-    # Stampa di debug per verificare la lunghezza della chiave (solitamente 40 caratteri)
-    print(f"DEBUG: ZENROWS_KEY presente (lunghezza: {len(zenrows_key)} caratteri)")
+    # Inviamo le opzioni di rendering tramite Header personalizzati per evitare errori 404 sulle rotte URL
+    headers = {
+        "X-Zenrows-Js-Render": "true",
+        "X-Zenrows-Premium-Proxy": "true"
+    }
 
     params = {
         "apikey": zenrows_key,
-        "url": target_url,
-        "js_render": "true",
+        "url": target_url
     }
 
     try:
-        response = requests.get("https://api.zenrows.com/v1/", params=params, timeout=TIMEOUT)
+        response = requests.get(
+            "https://api.zenrows.com/v1/", 
+            headers=headers, 
+            params=params, 
+            timeout=TIMEOUT
+        )
         response.raise_for_status()
         return response.text
     except requests.exceptions.HTTPError as e:
         print(f"Errore HTTP ZenRows per {target_url}: {e}", file=sys.stderr)
+        # Se anche con gli header risponde 404, proviamo l'endpoint alternativo /v1/scrape
+        if response.status_code == 404:
+            try:
+                alt_resp = requests.get(
+                    "https://api.zenrows.com/v1/scrape",
+                    headers=headers,
+                    params=params,
+                    timeout=TIMEOUT
+                )
+                alt_resp.raise_for_status()
+                return alt_resp.text
+            except Exception as alt_e:
+                print(f"Errore anche su endpoint alternativo /v1/scrape: {alt_e}", file=sys.stderr)
         return None
     except Exception as e:
         print(f"Errore download ZenRows per {target_url}: {e}", file=sys.stderr)
         return None
-
+        
 
 def analyze_with_gemini(text_content: str, url: str) -> JobListing | None:
     """Usa Gemini per validare se si tratta di una vera offerta ed estrarne i dati."""
