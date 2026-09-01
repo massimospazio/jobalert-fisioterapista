@@ -44,18 +44,27 @@ class JobListing:
 from urllib.parse import quote
 
 def fetch_with_zenrows(target_url: str) -> str | None:
-    """Scarica la pagina codificando l'URL per evitare 404/422 su ZenRows."""
+    """Scarica la pagina tramite ZenRows abilitando premium_proxy per i portali protetti."""
     zenrows_key = os.environ.get("ZENROWS_KEY", "").strip()
     if not zenrows_key:
         print("ZENROWS_KEY non trovata nei Secret di GitHub!", file=sys.stderr)
         return None
 
-    # Codifichiamo l'URL di destinazione per evitare problemi di parsing nel gateway
-    encoded_url = quote(target_url, safe="")
-    api_url = f"https://api.zenrows.com/v1/?apikey={zenrows_key}&url={encoded_url}&js_render=true"
+    # Parametri completi per superare i blocchi antispam/anti-bot di Bakeca
+    params = {
+        "apikey": zenrows_key,
+        "url": target_url,
+        "js_render": "true",
+        "premium_proxy": "true",
+        "custom_headers": "true"
+    }
+    
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    }
 
     try:
-        response = requests.get(api_url, timeout=TIMEOUT)
+        response = requests.get("https://api.zenrows.com/v1/", params=params, headers=headers, timeout=TIMEOUT)
         response.raise_for_status()
         return response.text
     except requests.exceptions.HTTPError as e:
@@ -67,7 +76,7 @@ def fetch_with_zenrows(target_url: str) -> str | None:
 
 
 def analyze_with_gemini(text_content: str, url: str) -> JobListing | None:
-    """Usa gemini-2.5-flash per analizzare l'annuncio."""
+    """Usa il modello attivo di Gemini per la classificazione dell'annuncio."""
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
         print("GEMINI_API_KEY non trovata.", file=sys.stderr)
@@ -110,7 +119,7 @@ def analyze_with_gemini(text_content: str, url: str) -> JobListing | None:
     """
 
     try:
-        # Aggiornato a gemini-2.5-flash come richiesto dall'API
+        # Aggiornato il modello per allinearsi all'API
         response = client.models.generate_content(
             model="gemini-2.5-flash",
             contents=prompt,
