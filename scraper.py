@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import json
 import os
+import re
 import smtplib
 import sys
 import time
@@ -8,7 +9,7 @@ from dataclasses import dataclass
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from pathlib import Path
-from urllib.parse import quote, urlparse
+from urllib.parse import urlparse
 
 import requests
 from bs4 import BeautifulSoup
@@ -44,17 +45,18 @@ class JobListing:
 
 
 def fetch_with_playwright(target_url: str) -> str | None:
-    """Scarica la pagina simulando un vero browser Chromium con Playwright."""
+    """Scarica la pagina simulando un browser Chromium reale in modalità Stealth."""
     try:
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
             context = browser.new_context(
                 user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-                viewport={"width": 1280, "height": 800}
+                viewport={"width": 1280, "height": 800},
+                locale="it-IT"
             )
             page = context.new_page()
             page.goto(target_url, wait_until="domcontentloaded", timeout=30000)
-            page.wait_for_timeout(2000)
+            page.wait_for_timeout(2500)
             content = page.content()
             browser.close()
             return content
@@ -64,16 +66,20 @@ def fetch_with_playwright(target_url: str) -> str | None:
 
 
 def fetch_page(target_url: str) -> str | None:
-    """Strategia Ibrida: Playwright -> Fallback ZenRows."""
+    """Strategia di download: Playwright primario -> ZenRows facoltativo se abilitato."""
     html = fetch_with_playwright(target_url)
 
     if html and len(html) > 3000 and "Access Denied" not in html and "Cloudflare" not in html:
         return html
 
+    use_zenrows = os.environ.get("USE_ZENROWS", "false").lower() == "true"
+    if not use_zenrows:
+        return html
+
     print(f"Playwright insufficiente per {target_url}. Attivazione fallback ZenRows...")
     zenrows_key = os.environ.get("ZENROWS_KEY", "").strip()
     if not zenrows_key:
-        return None
+        return html
 
     params = {
         "apikey": zenrows_key,
@@ -87,15 +93,55 @@ def fetch_page(target_url: str) -> str | None:
         return response.text
     except Exception as e:
         print(f"Errore fallback ZenRows per {target_url}: {e}", file=sys.stderr)
+        return html
+
+
+def analyze_with_heuristics(text_content: str, url: str) -> JobListing | None:
+    """Fallback locale (Regex/Keyword) quando Gemini non è disponibile o in Rate Limit."""
+    text_lower = text_content.lower()
+
+    keywords_job = ["fisioterapista", "fisioterapia", "riabilitazione", "riabilitativo"]
+    keywords_neg = ["cerco lavoro", "offro ripetizioni", "badante", "pulizie", "colf"]
+
+    if not any(k in text_lower for k in keywords_job):
         return None
+    if any(k in text_lower for k in keywords_neg):
+        return None
+
+    title_match = re.search(r"(cercasi|selezioniamo|offriamo|ricerca|opportunità)\s+([^\n.]+)", text_content, re.IGNORECASE)
+    title = title_match.group(0).strip()[:60] if title_match else "Fisioterapista (Estratto da Filtro Locale)"
+
+    is_adi = "Sì" if any(k in text_lower for k in ["adi", "domiciliare", "assistenza a domicilio"]) else "No"
+    albo = "Richiesta" if any(k in text_lower for k in ["albo", "tsrm", "pstrp", "iscrizione"]) else ND
+
+    parsed_url = urlparse(url)
+    source = parsed_url.netloc.replace("www.", "")
+
+    return JobListing(
+        title=title,
+        company="Azienda/Studio (Analisi Locale)",
+        source=source,
+        location="Roma / Provincia",
+        published_date=ND,
+        piva_required=ND,
+        employment_time=ND,
+        contract_duration=ND,
+        deadline=ND,
+        company_type=ND,
+        is_adi=is_adi,
+        salary=ND,
+        experience_required=ND,
+        albo_required=albo,
+        url=url
+    )
 
 
 def analyze_with_gemini(text_content: str, url: str) -> JobListing | None:
-    """Usa Gemini con gestione avanzata del Rate Limit."""
+    """Analisi tramite Gemini con fallback al parser locale se la quota viene superata."""
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
-        print("GEMINI_API_KEY non trovata.", file=sys.stderr)
-        return None
+        print("GEMINI_API_KEY non trovata. Uso analisi locale...", file=sys.stderr)
+        return analyze_with_heuristics(text_content, url)
 
     client = genai.Client(api_key=api_key)
 
@@ -133,7 +179,7 @@ def analyze_with_gemini(text_content: str, url: str) -> JobListing | None:
     }}
     """
 
-    for attempt in range(4):
+    for attempt in range(3):
         try:
             response = client.models.generate_content(
                 model="gemini-2.5-flash",
@@ -155,21 +201,20 @@ def analyze_with_gemini(text_content: str, url: str) -> JobListing | None:
         except Exception as e:
             err_msg = str(e)
             if "429" in err_msg or "RESOURCE_EXHAUSTED" in err_msg:
-                wait_time = 20 * (attempt + 1)
-                print(f"   [RATE LIMIT 429]: Quota Gemini superata. Attendo {wait_time} secondi...", file=sys.stderr)
-                time.sleep(wait_time)
-                continue
+                print(f"   [RATE LIMIT Gemini]: Quota superata. Attivazione fallback euristico locale...", file=sys.stderr)
+                return analyze_with_heuristics(text_content, url)
             elif "503" in err_msg and attempt < 2:
-                print("   [WARNING 503]: Gemini occupato. Riprovo tra 3 secondi...", file=sys.stderr)
                 time.sleep(3)
                 continue
 
-            print(f"Errore Gemini per {url}: {e}", file=sys.stderr)
-            return None
+            print(f"Errore Gemini per {url}: {e}. Uso analisi locale...", file=sys.stderr)
+            return analyze_with_heuristics(text_content, url)
+
+    return analyze_with_heuristics(text_content, url)
 
 
 def extract_job_urls(html_content: str, base_url: str) -> list[tuple[str, str]]:
-    """Estrae e pre-filtra i link degli annunci."""
+    """Estrae e filtra i link degli annunci."""
     soup = BeautifulSoup(html_content, "html.parser")
     candidates = []
 
@@ -184,14 +229,12 @@ def extract_job_urls(html_content: str, base_url: str) -> list[tuple[str, str]]:
         href_lower = href.lower()
         text_lower = text.lower()
 
-        # Filtro preliminare sulle URL per non sprecare chiamata Gemini
         if "bakeca.it" in base_url:
             if "/dettaglio/" in href_lower or "fisioterap" in href_lower or "fisioterap" in text_lower:
                 candidates.append((text, href))
         elif "subito.it" in base_url:
             if "/offerte-lavoro/" in href_lower and href_lower.endswith(".htm"):
-                # Pre-filtraggio per escludere badanti/pulizie già dal link
-                if any(k in href_lower for k in ["fisioterap", "riabilitaz", "sanitar", "studio", "clinica"]):
+                if any(k in href_lower for k in ["fisioterap", "riabilitaz", "sanitar", "studio", "clinica", "assistenza"]):
                     candidates.append((text, href))
 
     return candidates
@@ -208,10 +251,13 @@ def load_seen_urls() -> set:
 
 
 def save_seen_urls(urls: set) -> None:
-    STATE_FILE.write_text(
+    """Salvataggio atomico su file temporaneo per evitare corruzioni."""
+    temp_file = STATE_FILE.with_suffix(".tmp")
+    temp_file.write_text(
         json.dumps({"seen_urls": sorted(urls)}, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
+    temp_file.replace(STATE_FILE)
 
 
 def build_email_html(new_listings: list[JobListing]) -> str:
@@ -256,8 +302,8 @@ def build_email_html(new_listings: list[JobListing]) -> str:
 
 
 def send_email(subject: str, new_listings: list[JobListing]) -> None:
-    gmail_user = os.environ.get("EMAIL_USER") or os.environ.get("GMAIL_USER")
-    gmail_app_password = os.environ.get("EMAIL_PASS") or os.environ.get("GMAIL_APP_PASSWORD")
+    gmail_user = os.environ.get("GMAIL_USER") or os.environ.get("EMAIL_USER")
+    gmail_app_password = os.environ.get("GMAIL_APP_PASSWORD") or os.environ.get("EMAIL_PASS")
     email_to = os.environ.get("EMAIL_TO", gmail_user)
 
     if not gmail_user or not gmail_app_password:
@@ -280,7 +326,7 @@ def send_email(subject: str, new_listings: list[JobListing]) -> None:
 
 
 def main() -> int:
-    print("Avvio ricerca annunci tramite Strategia Ibrida (Playwright + ZenRows + Gemini)...")
+    print("Avvio ricerca annunci tramite Strategia Ibrida (Playwright + Gemini/Regex)...")
     seen_urls = load_seen_urls()
     is_first_run = len(seen_urls) == 0
 
@@ -331,17 +377,16 @@ def main() -> int:
 
             page_text = soup.get_text(separator=" ", strip=True)
 
-            # Pausa di 5 secondi per prevenire il Rate Limit 429
-            time.sleep(5)
+            time.sleep(3)
 
-            print("   Analisi con Gemini in corso...")
+            print("   Analisi annuncio in corso...")
             listing = analyze_with_gemini(page_text, url)
 
             if listing:
                 print(f"   [OFFERTA CONFERMATA]: {listing.title} ({listing.company})")
                 all_listings.append(listing)
             else:
-                print("   [SCARTATA]: Non è un'offerta di lavoro valida secondo Gemini.")
+                print("   [SCARTATA]: Non è un'offerta di lavoro valida.")
 
     print(f"\nTotale nuove offerte valide trovate: {len(all_listings)}")
 
