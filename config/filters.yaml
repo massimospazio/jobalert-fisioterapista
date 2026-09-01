@@ -1,0 +1,26 @@
+positive_keywords:
+  - fisioterapista
+  - fisioterapia
+  - riabilitazione
+  - terapista della riabilitazione
+
+negative_keywords:
+  - cerco lavoro come
+  - offro servizio
+  - offro trattamenti
+  - badante
+  - pulizie
+
+exclusion_rules:
+  candidate_ad:
+    description: Persona che cerca lavoro invece di offrirlo
+    patterns:
+      - cerco lavoro come fisioterapista
+      - fisioterapista cerca lavoro
+  service_offer:
+    description: Professionista che pubblicizza i propri servizi
+    patterns:
+      - offro trattamenti
+      - offro servizio di fisioterapia
+
+require_positive_match: true
