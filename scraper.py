@@ -44,27 +44,21 @@ class JobListing:
 from urllib.parse import quote
 
 def fetch_with_zenrows(target_url: str) -> str | None:
-    """Scarica la pagina tramite ZenRows abilitando premium_proxy per i portali protetti."""
+    """Scarica il contenuto HTML con ZenRows usando proxy premium e rendering JS."""
     zenrows_key = os.environ.get("ZENROWS_KEY", "").strip()
     if not zenrows_key:
         print("ZENROWS_KEY non trovata nei Secret di GitHub!", file=sys.stderr)
         return None
 
-    # Parametri completi per superare i blocchi antispam/anti-bot di Bakeca
     params = {
         "apikey": zenrows_key,
         "url": target_url,
         "js_render": "true",
-        "premium_proxy": "true",
-        "custom_headers": "true"
-    }
-    
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        "premium_proxy": "true"
     }
 
     try:
-        response = requests.get("https://api.zenrows.com/v1/", params=params, headers=headers, timeout=TIMEOUT)
+        response = requests.get("https://api.zenrows.com/v1/", params=params, timeout=TIMEOUT)
         response.raise_for_status()
         return response.text
     except requests.exceptions.HTTPError as e:
@@ -76,7 +70,7 @@ def fetch_with_zenrows(target_url: str) -> str | None:
 
 
 def analyze_with_gemini(text_content: str, url: str) -> JobListing | None:
-    """Usa il modello attivo di Gemini per la classificazione dell'annuncio."""
+    """Usa il modello gemini-3.6-flash per la classificazione e l'estrazione."""
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
         print("GEMINI_API_KEY non trovata.", file=sys.stderr)
@@ -119,9 +113,8 @@ def analyze_with_gemini(text_content: str, url: str) -> JobListing | None:
     """
 
     try:
-        # Aggiornato il modello per allinearsi all'API
         response = client.models.generate_content(
-            model="gemini-2.5-flash",
+            model="gemini-3.6-flash",
             contents=prompt,
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
@@ -248,7 +241,7 @@ def main() -> int:
     is_first_run = len(seen_urls) == 0
 
     target_urls = [
-        "https://www.bakeca.it/offerte-lavoro/roma/keyword/fisioterapista/",
+        "https://www.bakeca.it/offerte-lavoro/roma/?q=fisioterapista",
         "https://www.subito.it/annunci-lazio/vendita/offerte-lavoro/roma/?q=fisioterapista"
     ]
 
