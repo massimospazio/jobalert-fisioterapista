@@ -1,47 +1,36 @@
-name: Job Alert Fisioterapista
+name: Job Scraper & Alert System
 
 on:
   schedule:
-    - cron: "0 7 * * *"
+    # Esecuzione ogni 6 ore
+    - cron: '0 */6 * * *'
   workflow_dispatch:
-    inputs:
-      send_baseline_email:
-        description: "Invia comunque un'email di test con tutti gli annunci trovati"
-        type: boolean
-        default: false
-
-permissions:
-  contents: write
 
 jobs:
-  check-jobs:
+  scrape-and-notify:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout repo
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Python
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: '3.11'
+          cache: 'pip'
 
-      - name: Installa dipendenze
-        run: pip install -r requirements.txt
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          playwright install chromium --with-deps
 
-      - name: Esegui lo scraper e invia eventuale email
+      - name: Run Scraper Script
         env:
-          GMAIL_USER: ${{ secrets.GMAIL_USER }}
-          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
-          EMAIL_TO: ${{ secrets.EMAIL_TO }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           ZENROWS_KEY: ${{ secrets.ZENROWS_KEY }}
-          SEND_BASELINE_EMAIL: ${{ github.event.inputs.send_baseline_email || 'false' }}
+          EMAIL_USER: ${{ secrets.EMAIL_USER }}
+          EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
+          EMAIL_TO: ${{ secrets.EMAIL_TO }}
         run: python scraper.py
-
-      - name: Salva lo stato aggiornato nel repo
-        run: |
-          git config user.name "job-alert-bot"
-          git config user.email "actions@github.com"
-          git add state.json
-          git diff --quiet --cached || git commit -m "Aggiorna elenco annunci visti [skip ci]"
-          git push
