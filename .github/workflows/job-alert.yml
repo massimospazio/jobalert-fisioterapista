@@ -28,10 +28,10 @@ jobs:
 
       - name: Run Scraper Script
         env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+         GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           ZENROWS_KEY: ${{ secrets.ZENROWS_KEY }}
-          EMAIL_USER: ${{ secrets.EMAIL_USER }}
-          EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
           EMAIL_TO: ${{ secrets.EMAIL_TO }}
           SEND_BASELINE_EMAIL: "true"
         run: python scraper.py
