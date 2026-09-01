@@ -4,3 +4,4 @@ lxml==5.3.0
 google-genai
 zenrows
 playwright>=1.40.0
+groq>=0.18.0
