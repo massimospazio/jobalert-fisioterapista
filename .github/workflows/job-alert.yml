@@ -1,4 +1,20 @@
-name: Job Scraper & Alert System
+- name: Esegui Scraper in Modalità Test
+      env:
+        GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}  # Se configurata nei Secrets
+        ZENROWS_KEY: ${{ secrets.ZENROWS_KEY }}        # Se configurata nei Secrets
+        DRY_RUN: "true"
+      run: python scraper.py
+
+    - name: Salva Report come Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: report-risultati
+        path: |
+          preview.html
+          risultati.txt
+        if-no-files-found: ignore  # Evita il fallimento della pipeline se non ci sono nuove offerte
+  name: Job Scraper & Alert System
 
 on:
   workflow_dispatch: # <--- Questa riga abilita il tasto "Run workflow"
