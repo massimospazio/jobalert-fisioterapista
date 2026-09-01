@@ -34,6 +34,7 @@ jobs:
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
           EMAIL_TO: ${{ secrets.EMAIL_TO }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          ZENROWS_KEY: ${{ secrets.ZENROWS_KEY }}
           SEND_BASELINE_EMAIL: ${{ github.event.inputs.send_baseline_email || 'false' }}
         run: python scraper.py
 
