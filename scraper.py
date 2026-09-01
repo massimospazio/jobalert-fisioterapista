@@ -8,7 +8,6 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from pathlib import Path
 from urllib.parse import urlparse
-from zenrows import ZenRowsClient
 
 import requests
 from bs4 import BeautifulSoup
@@ -65,7 +64,7 @@ def fetch_with_zenrows(target_url: str) -> str | None:
     except Exception as e:
         print(f"Errore download ZenRows per {target_url}: {e}", file=sys.stderr)
         return None
-        
+
 
 def analyze_with_gemini(text_content: str, url: str) -> JobListing | None:
     """Usa Gemini per validare se si tratta di una vera offerta ed estrarne i dati."""
@@ -150,8 +149,8 @@ def extract_job_urls(html_content: str, base_url: str) -> list[tuple[str, str]]:
         if "bakeca.it" in base_url:
             if "/dettaglio/" in href_lower or "fisioterapista" in href_lower:
                 candidates.append((text, href))
-        elif "lavoro.it" in base_url:
-            if ("/offerta/" in href_lower or "/annuncio/" in href_lower or "fisioterapista" in href_lower) and not href_lower.endswith(".html"):
+        elif "subito.it" in base_url:
+            if "/offerte-lavoro/" in href_lower and href_lower.endswith(".htm"):
                 candidates.append((text, href))
         else:
             if "fisioterapista" in href_lower or "fisioterapista" in text.lower():
@@ -239,7 +238,7 @@ def main() -> int:
     seen_urls = load_seen_urls()
     is_first_run = len(seen_urls) == 0
 
-   target_urls = [
+    target_urls = [
         "https://www.bakeca.it/offerte-lavoro/roma/keyword/fisioterapista/",
         "https://www.subito.it/annunci-lazio/vendita/offerte-lavoro/roma/?q=fisioterapista"
     ]
