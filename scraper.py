@@ -51,19 +51,23 @@ class JobListing:
 from zenrows import ZenRowsClient
 
 def fetch_with_zenrows(target_url: str) -> str | None:
-    """Scarica il contenuto HTML della pagina usando il client ufficiale ZenRows."""
+    """Scarica il contenuto HTML della pagina tramite l'API aggiornata di ZenRows."""
     zenrows_key = os.environ.get("ZENROWS_KEY", "").strip()
     if not zenrows_key:
         print("ZENROWS_KEY non trovata nei Secret di GitHub!", file=sys.stderr)
         return None
 
+    # Usiamo l'endpoint aggiornato senza /v1/ per evitare il 404
+    params = {
+        "apikey": zenrows_key,
+        "url": target_url,
+        "js_render": "true"
+    }
+    
     try:
-        client = ZenRowsClient(zenrows_key)
-        # Passiamo le opzioni di rendering Javascript richieste per Bakeca/Lavoro.it
-        params = {"js_render": "true"}
-        response = client.get(target_url, params=params)
-        response.raise_for_status()
-        return response.text
+        resp = requests.get("https://api.zenrows.com/", params=params, timeout=TIMEOUT)
+        resp.raise_for_status()
+        return resp.text
     except Exception as e:
         print(f"Errore download ZenRows per {target_url}: {e}", file=sys.stderr)
         return None
