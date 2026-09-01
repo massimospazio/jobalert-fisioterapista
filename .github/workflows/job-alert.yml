@@ -1,15 +1,13 @@
 name: Job Scraper & Alert System
 
 on:
+  workflow_dispatch: # <--- Questa riga abilita il tasto "Run workflow"
   schedule:
-    # Esecuzione ogni 6 ore
-    - cron: '0 */6 * * *'
-  workflow_dispatch:
+    - cron: '0 8 * * *' # (opzionale) per le esecuzioni automatiche
 
 jobs:
-  scrape-and-notify:
+  run-scraper:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -18,7 +16,6 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          cache: 'pip'
 
       - name: Install dependencies
         run: |
@@ -28,7 +25,7 @@ jobs:
 
       - name: Run Scraper Script
         env:
-         GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           ZENROWS_KEY: ${{ secrets.ZENROWS_KEY }}
           GMAIL_USER: ${{ secrets.GMAIL_USER }}
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
