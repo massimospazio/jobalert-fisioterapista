@@ -302,19 +302,35 @@ def build_email_html(new_listings: list[JobListing]) -> str:
 
 
 def send_email(subject: str, new_listings: list[JobListing]) -> None:
+    html_content = build_email_html(new_listings)
+    
+    # 1. Salvataggio locale per il test immediato
+    preview_path = Path(__file__).parent / "preview.html"
+    preview_path.write_text(html_content, encoding="utf-8")
+    print(f"\n📄 Anteprima HTML salvata in: {preview_path.resolve()}")
+
+    # 2. Stampa sintetica a terminale
+    print("\n--- RISULTATI TROVATI ---")
+    for idx, job in enumerate(new_listings, 1):
+        print(f"[{idx}] {job.title}")
+        print(f"    Azienda: {job.company} | Sede: {job.location}")
+        print(f"    P.IVA: {job.piva_required} | ADI: {job.is_adi}")
+        print(f"    URL: {job.url}\n")
+
+    # 3. Invio email (viene saltato se le credenziali non sono presenti)
     gmail_user = os.environ.get("GMAIL_USER") or os.environ.get("EMAIL_USER")
     gmail_app_password = os.environ.get("GMAIL_APP_PASSWORD") or os.environ.get("EMAIL_PASS")
     email_to = os.environ.get("EMAIL_TO", gmail_user)
 
     if not gmail_user or not gmail_app_password:
-        print("Credenziali e-mail non configurate negli Environment Variable.", file=sys.stderr)
+        print("ℹ️ Credenziali Gmail assenti: invio e-mail saltato (modalità offline/test).")
         return
 
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
     msg["From"] = gmail_user
     msg["To"] = email_to
-    msg.attach(MIMEText(build_email_html(new_listings), "html", "utf-8"))
+    msg.attach(MIMEText(html_content, "html", "utf-8"))
 
     try:
         with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
