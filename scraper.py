@@ -51,12 +51,18 @@ def fetch_with_playwright(target_url: str) -> str | None:
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
             context = browser.new_context(
-                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+                user_agent=(
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+                    " AppleWebKit/537.36 (KHTML, like Gecko)"
+                    " Chrome/122.0.0.0 Safari/537.36"
+                ),
                 viewport={"width": 1280, "height": 800},
-                locale="it-IT"
+                locale="it-IT",
             )
             page = context.new_page()
-            page.goto(target_url, wait_until="domcontentloaded", timeout=30000)
+            page.goto(
+                target_url, wait_until="domcontentloaded", timeout=30000
+            )
             page.wait_for_timeout(2500)
             content = page.content()
             browser.close()
@@ -70,26 +76,32 @@ def fetch_page(target_url: str) -> str | None:
     """Strategia di download: Playwright primario -> ZenRows facoltativo se abilitato."""
     html = fetch_with_playwright(target_url)
 
-    if html and len(html) > 3000 and "Access Denied" not in html and "Cloudflare" not in html:
+    if (
+        html
+        and len(html) > 3000
+        and "Access Denied" not in html
+        and "Cloudflare" not in html
+    ):
         return html
 
     use_zenrows = os.environ.get("USE_ZENROWS", "false").lower() == "true"
     if not use_zenrows:
         return html
 
-    print(f"Playwright insufficiente per {target_url}. Attivazione fallback ZenRows...")
+    print(
+        f"Playwright insufficiente per {target_url}. Attivazione fallback"
+        " ZenRows..."
+    )
     zenrows_key = os.environ.get("ZENROWS_KEY", "").strip()
     if not zenrows_key:
         return html
 
-    params = {
-        "apikey": zenrows_key,
-        "url": target_url,
-        "js_render": "true"
-    }
+    params = {"apikey": zenrows_key, "url": target_url, "js_render": "true"}
 
     try:
-        response = requests.get("https://api.zenrows.com/v1/", params=params, timeout=TIMEOUT)
+        response = requests.get(
+            "https://api.zenrows.com/v1/", params=params, timeout=TIMEOUT
+        )
         response.raise_for_status()
         return response.text
     except Exception as e:
@@ -101,20 +113,50 @@ def analyze_with_heuristics(text_content: str, url: str) -> JobListing | None:
     """Fallback locale (Regex/Keyword) quando Gemini non è disponibile o va in errore."""
     text_lower = text_content.lower()
 
-    keywords_job = ["fisioterapista", "fisioterapia", "riabilitazione", "riabilitativo"]
-   # Sostituisci keywords_neg con parole meno generiche
-    keywords_neg = ["cerco lavoro come", "offro ripetizioni", "badante", "pulizie", "colf", "cerco impiego"]
+    keywords_job = [
+        "fisioterapista",
+        "fisioterapia",
+        "riabilitazione",
+        "riabilitativo",
+    ]
+    keywords_neg = [
+        "cerco lavoro come",
+        "offro ripetizioni",
+        "badante",
+        "pulizie",
+        "colf",
+        "cerco impiego",
+    ]
 
     if not any(k in text_lower for k in keywords_job):
         return None
     if any(k in text_lower for k in keywords_neg):
         return None
 
-    title_match = re.search(r"(cercasi|selezioniamo|offriamo|ricerca|opportunità)\s+([^\n.]+)", text_content, re.IGNORECASE)
-    title = title_match.group(0).strip()[:60] if title_match else "Fisioterapista (Estratto da Filtro Locale)"
+    title_match = re.search(
+        r"(cercasi|selezioniamo|offriamo|ricerca|opportunità)\s+([^\n.]+)",
+        text_content,
+        re.IGNORECASE,
+    )
+    title = (
+        title_match.group(0).strip()[:60]
+        if title_match
+        else "Fisioterapista (Estratto da Filtro Locale)"
+    )
 
-    is_adi = "Sì" if any(k in text_lower for k in ["adi", "domiciliare", "assistenza a domicilio"]) else "No"
-    albo = "Richiesta" if any(k in text_lower for k in ["albo", "tsrm", "pstrp", "iscrizione"]) else ND
+    is_adi = (
+        "Sì"
+        if any(
+            k in text_lower
+            for k in ["adi", "domiciliare", "assistenza a domicilio"]
+        )
+        else "No"
+    )
+    albo = (
+        "Richiesta"
+        if any(k in text_lower for k in ["albo", "tsrm", "pstrp", "iscrizione"])
+        else ND
+    )
 
     parsed_url = urlparse(url)
     source = parsed_url.netloc.replace("www.", "")
@@ -134,7 +176,7 @@ def analyze_with_heuristics(text_content: str, url: str) -> JobListing | None:
         salary=ND,
         experience_required=ND,
         albo_required=albo,
-        url=url
+        url=url,
     )
 
 
@@ -142,7 +184,9 @@ def analyze_with_gemini(text_content: str, url: str) -> JobListing | None:
     """Analisi tramite Gemini con fallback al parser locale se la quota o il servizio falliscono."""
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
-        print("GEMINI_API_KEY non trovata. Uso analisi locale...", file=sys.stderr)
+        print(
+            "GEMINI_API_KEY non trovata. Uso analisi locale...", file=sys.stderr
+        )
         return analyze_with_heuristics(text_content, url)
 
     client = genai.Client(api_key=api_key)
@@ -203,19 +247,28 @@ def analyze_with_gemini(text_content: str, url: str) -> JobListing | None:
         except Exception as e:
             err_msg = str(e)
             if "429" in err_msg or "RESOURCE_EXHAUSTED" in err_msg:
-                print("   [RATE LIMIT Gemini]: Quota superata. Attivazione fallback euristico locale...", file=sys.stderr)
+                print(
+                    "   [RATE LIMIT Gemini]: Quota superata. Attivazione"
+                    " fallback euristico locale...",
+                    file=sys.stderr,
+                )
                 return analyze_with_heuristics(text_content, url)
             elif "503" in err_msg and attempt < 2:
                 time.sleep(3)
                 continue
 
-            print(f"Errore Gemini per {url}: {e}. Uso analisi locale...", file=sys.stderr)
+            print(
+                f"Errore Gemini per {url}: {e}. Uso analisi locale...",
+                file=sys.stderr,
+            )
             return analyze_with_heuristics(text_content, url)
 
     return analyze_with_heuristics(text_content, url)
 
 
-def extract_job_urls(html_content: str, base_url: str) -> list[tuple[str, str]]:
+def extract_job_urls(
+    html_content: str, base_url: str
+) -> list[tuple[str, str]]:
     """Estrae e filtra i link degli annunci."""
     soup = BeautifulSoup(html_content, "html.parser")
     candidates = []
@@ -230,13 +283,30 @@ def extract_job_urls(html_content: str, base_url: str) -> list[tuple[str, str]]:
 
         href_lower = href.lower()
         text_lower = text.lower()
-    if "bakeca.it" in base_url:
-    if any(k in href_lower for k in ["/dettaglio/", "/offerta/", "fisioterap"]) or "fisioterap" in text_lower:
-        candidates.append((text, href))
-    
+
+        if "bakeca.it" in base_url:
+            if (
+                any(
+                    k in href_lower
+                    for k in ["/dettaglio/", "/offerta/", "fisioterap"]
+                )
+                or "fisioterap" in text_lower
+            ):
+                candidates.append((text, href))
+
         elif "subito.it" in base_url:
             if "/offerte-lavoro/" in href_lower and href_lower.endswith(".htm"):
-                if any(k in href_lower for k in ["fisioterap", "riabilitaz", "sanitar", "studio", "clinica", "assistenza"]):
+                if any(
+                    k in href_lower
+                    for k in [
+                        "fisioterap",
+                        "riabilitaz",
+                        "sanitar",
+                        "studio",
+                        "clinica",
+                        "assistenza",
+                    ]
+                ):
                     candidates.append((text, href))
 
     return candidates
@@ -284,11 +354,26 @@ def build_email_html(new_listings: list[JobListing]) -> str:
         </tr>""")
 
     headers = [
-        "Titolo", "Azienda", "Fonte", "Sede", "Pubblicato",
-        "P.IVA", "Orario", "Contratto", "Scadenza", "Tipo Società",
-        "ADI", "Retribuzione", "Esperienza", "Albo TSRM/PSTRP"
+        "Titolo",
+        "Azienda",
+        "Fonte",
+        "Sede",
+        "Pubblicato",
+        "P.IVA",
+        "Orario",
+        "Contratto",
+        "Scadenza",
+        "Tipo Società",
+        "ADI",
+        "Retribuzione",
+        "Esperienza",
+        "Albo TSRM/PSTRP",
     ]
-    header_html = "".join(f'<th style="padding:8px;border:1px solid #ddd;background:#2c3e50;color:#fff;font-size:11px;">{h}</th>' for h in headers)
+    header_html = "".join(
+        f'<th style="padding:8px;border:1px solid'
+        f' #ddd;background:#2c3e50;color:#fff;font-size:11px;">{h}</th>'
+        for h in headers
+    )
 
     return f"""
     <html><body style="font-family:Arial,sans-serif;font-size:12px;">
@@ -321,11 +406,16 @@ def send_email(subject: str, new_listings: list[JobListing]) -> None:
 
     # 3. Invio email se le credenziali sono configurate
     gmail_user = os.environ.get("GMAIL_USER") or os.environ.get("EMAIL_USER")
-    gmail_app_password = os.environ.get("GMAIL_APP_PASSWORD") or os.environ.get("EMAIL_PASS")
+    gmail_app_password = os.environ.get("GMAIL_APP_PASSWORD") or os.environ.get(
+        "EMAIL_PASS"
+    )
     email_to = os.environ.get("EMAIL_TO", gmail_user)
 
     if not gmail_user or not gmail_app_password:
-        print("ℹ️ Credenziali Gmail assenti: invio e-mail saltato (modalità test).")
+        print(
+            "ℹ️ Credenziali Gmail assenti: invio e-mail saltato (modalità"
+            " test)."
+        )
         return
 
     msg = MIMEMultipart("alternative")
@@ -344,13 +434,16 @@ def send_email(subject: str, new_listings: list[JobListing]) -> None:
 
 
 def main() -> int:
-    print(f"Avvio ricerca annunci tramite Strategia Ibrida (Playwright + {GEMINI_MODEL}/Regex)...")
+    print(
+        "Avvio ricerca annunci tramite Strategia Ibrida (Playwright +"
+        f" {GEMINI_MODEL}/Regex)..."
+    )
     seen_urls = load_seen_urls()
     is_first_run = len(seen_urls) == 0
 
     target_urls = [
         "https://www.bakeca.it/offerte-lavoro/roma/?q=fisioterapista",
-        "https://www.subito.it/annunci-lazio/vendita/offerte-lavoro/roma/?q=fisioterapista"
+        "https://www.subito.it/annunci-lazio/vendita/offerte-lavoro/roma/?q=fisioterapista",
     ]
 
     all_listings = []
@@ -362,7 +455,10 @@ def main() -> int:
             continue
 
         candidates = extract_job_urls(html, target)
-        print(f"Estratti {len(candidates)} link totali. Filtraggio dei link pertinenti...")
+        print(
+            f"Estratti {len(candidates)} link totali. Filtraggio dei link"
+            " pertinenti..."
+        )
 
         valid_candidates = []
         seen_candidate_urls = set()
@@ -372,40 +468,49 @@ def main() -> int:
                 continue
 
             url_lower = url.lower()
-            if "keyword/fisioterapista" in url_lower or "page=" in url_lower:
+            if (
+                "keyword/fisioterapista" in url_lower
+                or "page=" in url_lower
+            ):
                 continue
 
             if url not in seen_candidate_urls:
                 seen_candidate_urls.add(url)
                 valid_candidates.append((text, url))
 
-        print(f"Trovati {len(valid_candidates)} link di annunci potenziali non ancora visti.")
+        print(
+            f"Trovati {len(valid_candidates)} link di annunci potenziali non"
+            " ancora visti."
+        )
 
         for text, url in valid_candidates[:5]:
-        # Dentro il ciclo for text, url in valid_candidates[:5]:
-        print("   Analisi annuncio in corso...")
-        time.sleep(4)  # Mantiene le richieste sotto il limite RPM di Gemini
-        listing = analyze_with_gemini(page_text, url)
             print(f"\n  Scarico dettagli per: {text[:40]}... -> {url}")
             detail_html = fetch_page(url)
 
             if not detail_html:
-                print("   [ERRORE]: Impossibile scaricare la pagina dell'annuncio.")
+                print(
+                    "   [ERRORE]: Impossibile scaricare la pagina"
+                    " dell'annuncio."
+                )
                 continue
 
             soup = BeautifulSoup(detail_html, "html.parser")
-            for element in soup(["script", "style", "nav", "footer", "header"]):
+            for element in soup(
+                ["script", "style", "nav", "footer", "header"]
+            ):
                 element.decompose()
 
             page_text = soup.get_text(separator=" ", strip=True)
 
-            time.sleep(3)
-
             print("   Analisi annuncio in corso...")
+            time.sleep(4)  # Mantiene le richieste sotto il limite RPM di Gemini
             listing = analyze_with_gemini(page_text, url)
 
             if listing:
-                print(f"   [OFFERTA CONFERMATA]: {listing.title} ({listing.company})")
+                print(
+                    "   [OFFERTA CONFERMATA]:"
+                    f" {listing.title} ({listing.company})"
+                )
                 all_listings.append(listing)
             else:
                 print("   [SCARTATA]: Non è un'offerta di lavoro valida.")
@@ -414,14 +519,27 @@ def main() -> int:
 
     if all_listings:
         preview_path = Path(__file__).parent / "preview.html"
-        preview_path.write_text(build_email_html(all_listings), encoding="utf-8")
-        print(f"\n📄 Anteprima generata con successo: {preview_path.resolve()}")
+        preview_path.write_text(
+            build_email_html(all_listings), encoding="utf-8"
+        )
+        print(
+            f"\n📄 Anteprima generata con successo: {preview_path.resolve()}"
+        )
 
     if is_first_run:
-        send_baseline_email = os.environ.get("SEND_BASELINE_EMAIL", "false").lower() == "true"
+        send_baseline_email = (
+            os.environ.get("SEND_BASELINE_EMAIL", "false").lower() == "true"
+        )
         if send_baseline_email and all_listings:
-            print(f"Primo avvio (Test): invio e-mail con i {len(all_listings)} annunci trovati.")
-            send_email(f"🧪 TEST Strategia Ibrida — Baseline: {len(all_listings)} annunci", all_listings)
+            print(
+                "Primo avvio (Test): invio e-mail con i"
+                f" {len(all_listings)} annunci trovati."
+            )
+            send_email(
+                "🧪 TEST Strategia Ibrida — Baseline:"
+                f" {len(all_listings)} annunci",
+                all_listings,
+            )
         else:
             print("Primo avvio: registro gli annunci attuali come baseline.")
 
@@ -432,7 +550,10 @@ def main() -> int:
 
     if new_listings:
         print(f"Trovati {len(new_listings)} nuovi annunci! Invio e-mail...")
-        send_email(f"🔎 {len(new_listings)} Nuove Offerte Fisioterapista Roma", new_listings)
+        send_email(
+            f"🔎 {len(new_listings)} Nuove Offerte Fisioterapista Roma",
+            new_listings,
+        )
     else:
         print("Nessuna novità rispetto all'ultima scansione.")
 
