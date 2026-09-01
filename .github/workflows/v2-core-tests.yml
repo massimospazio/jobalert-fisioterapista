@@ -28,9 +28,9 @@ jobs:
         run: python -m unittest tests/test_core.py -v
 
       - name: Probe ZenRows on Bakeca
-        if: ${{ env.ZENROWS_API_KEY != '' }}
+        if: ${{ env.ZENROWS_KEY != '' }}
         env:
-          ZENROWS_API_KEY: ${{ secrets.ZENROWS_API_KEY }}
+          ZENROWS_KEY: ${{ secrets.ZENROWS_KEY }}
         run: python tools/zenrows_probe.py
 
       - name: Upload ZenRows diagnostics
