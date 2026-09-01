@@ -65,17 +65,16 @@ def fetch_with_playwright(target_url: str) -> str | None:
 
 def fetch_page(target_url: str) -> str | None:
     """Strategia Ibrida: 
-    1. Prova prima con Playwright (Gratis).
-    2. Usa ZenRows solo se Playwright fallisce o viene bloccato.
+    1. Prova Playwright.
+    2. Se l'HTML è spoglio (es. Bakeca) o bloccato, passa a ZenRows.
     """
-    print(f"Tentativo download gratuito (Playwright): {target_url}")
     html = fetch_with_playwright(target_url)
 
-    # Se Playwright ha successo e il contenuto non è un blocco evidente, lo restituisce
-    if html and len(html) > 1000 and "Access Denied" not in html and "Cloudflare" not in html:
+    # Verifica se l'HTML restituito da Playwright contiene contenuti validi
+    if html and len(html) > 3000 and "Access Denied" not in html and "Cloudflare" not in html:
         return html
 
-    print(f"Playwright non sufficiente. Attivazione fallback ZenRows per: {target_url}")
+    print(f"Playwright insufficiente per {target_url}. Attivazione fallback ZenRows...")
     zenrows_key = os.environ.get("ZENROWS_KEY", "").strip()
     if not zenrows_key:
         return None
@@ -93,10 +92,9 @@ def fetch_page(target_url: str) -> str | None:
     except Exception as e:
         print(f"Errore fallback ZenRows per {target_url}: {e}", file=sys.stderr)
         return None
-
-
+        
 def analyze_with_gemini(text_content: str, url: str) -> JobListing | None:
-    """Usa Gemini con un meccanismo di retry automatico in caso di errore 503."""
+    """Usa Gemini con gestione del Rate Limit (429) e Retry su 503."""
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
         print("GEMINI_API_KEY non trovata.", file=sys.stderr)
@@ -138,7 +136,7 @@ def analyze_with_gemini(text_content: str, url: str) -> JobListing | None:
     }}
     """
 
-    for attempt in range(2):
+    for attempt in range(3):
         try:
             response = client.models.generate_content(
                 model="gemini-3.6-flash",
@@ -158,10 +156,17 @@ def analyze_with_gemini(text_content: str, url: str) -> JobListing | None:
             return JobListing(**data)
 
         except Exception as e:
-            if "503" in str(e) and attempt == 0:
-                print("   [WARNING]: Gemini occupato (503). Riprovo tra 2 secondi...", file=sys.stderr)
-                time.sleep(2)
+            err_msg = str(e)
+            if "429" in err_msg or "RESOURCE_EXHAUSTED" in err_msg:
+                wait_time = 15 * (attempt + 1)
+                print(f"   [RATE LIMIT 429]: Quota Gemini superata. Attendo {wait_time} secondi...", file=sys.stderr)
+                time.sleep(wait_time)
                 continue
+            elif "503" in err_msg and attempt < 2:
+                print("   [WARNING 503]: Gemini occupato. Riprovo tra 3 secondi...", file=sys.stderr)
+                time.sleep(3)
+                continue
+
             print(f"Errore Gemini per {url}: {e}", file=sys.stderr)
             return None
 
@@ -310,7 +315,7 @@ def main() -> int:
 
         print(f"Trovati {len(valid_candidates)} link di annunci potenziali non ancora visti.")
 
-        for text, url in valid_candidates[:10]:
+     for text, url in valid_candidates[:10]:
             print(f"\n  Scarico dettagli per: {text[:40]}... -> {url}")
             detail_html = fetch_page(url)
 
@@ -323,6 +328,9 @@ def main() -> int:
                 element.decompose()
 
             page_text = soup.get_text(separator=" ", strip=True)
+
+            # Pausa per evitare l'errore 429 di Gemini
+            time.sleep(3)
 
             print("   Analisi con Gemini in corso...")
             listing = analyze_with_gemini(page_text, url)
