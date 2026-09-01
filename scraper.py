@@ -18,6 +18,7 @@ from google.genai import types
 from playwright.sync_api import sync_playwright
 
 STATE_FILE = Path(__file__).parent / "state.json"
+GEMINI_MODEL = "gemini-3.6-flash"
 TIMEOUT = 45
 ND = "n.d."
 
@@ -97,7 +98,7 @@ def fetch_page(target_url: str) -> str | None:
 
 
 def analyze_with_heuristics(text_content: str, url: str) -> JobListing | None:
-    """Fallback locale (Regex/Keyword) quando Gemini non è disponibile o in Rate Limit."""
+    """Fallback locale (Regex/Keyword) quando Gemini non è disponibile o va in errore."""
     text_lower = text_content.lower()
 
     keywords_job = ["fisioterapista", "fisioterapia", "riabilitazione", "riabilitativo"]
@@ -137,7 +138,7 @@ def analyze_with_heuristics(text_content: str, url: str) -> JobListing | None:
 
 
 def analyze_with_gemini(text_content: str, url: str) -> JobListing | None:
-    """Analisi tramite Gemini con fallback al parser locale se la quota viene superata."""
+    """Analisi tramite Gemini con fallback al parser locale se la quota o il servizio falliscono."""
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
         print("GEMINI_API_KEY non trovata. Uso analisi locale...", file=sys.stderr)
@@ -182,7 +183,7 @@ def analyze_with_gemini(text_content: str, url: str) -> JobListing | None:
     for attempt in range(3):
         try:
             response = client.models.generate_content(
-                model="gemini-2.5-flash",
+                model=GEMINI_MODEL,
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     response_mime_type="application/json",
@@ -303,13 +304,13 @@ def build_email_html(new_listings: list[JobListing]) -> str:
 
 def send_email(subject: str, new_listings: list[JobListing]) -> None:
     html_content = build_email_html(new_listings)
-    
-    # 1. Salvataggio locale per il test immediato
+
+    # 1. Salvataggio anteprima locale
     preview_path = Path(__file__).parent / "preview.html"
     preview_path.write_text(html_content, encoding="utf-8")
     print(f"\n📄 Anteprima HTML salvata in: {preview_path.resolve()}")
 
-    # 2. Stampa sintetica a terminale
+    # 2. Stampa a terminale
     print("\n--- RISULTATI TROVATI ---")
     for idx, job in enumerate(new_listings, 1):
         print(f"[{idx}] {job.title}")
@@ -317,13 +318,13 @@ def send_email(subject: str, new_listings: list[JobListing]) -> None:
         print(f"    P.IVA: {job.piva_required} | ADI: {job.is_adi}")
         print(f"    URL: {job.url}\n")
 
-    # 3. Invio email (viene saltato se le credenziali non sono presenti)
+    # 3. Invio email se le credenziali sono configurate
     gmail_user = os.environ.get("GMAIL_USER") or os.environ.get("EMAIL_USER")
     gmail_app_password = os.environ.get("GMAIL_APP_PASSWORD") or os.environ.get("EMAIL_PASS")
     email_to = os.environ.get("EMAIL_TO", gmail_user)
 
     if not gmail_user or not gmail_app_password:
-        print("ℹ️ Credenziali Gmail assenti: invio e-mail saltato (modalità offline/test).")
+        print("ℹ️ Credenziali Gmail assenti: invio e-mail saltato (modalità test).")
         return
 
     msg = MIMEMultipart("alternative")
@@ -342,7 +343,7 @@ def send_email(subject: str, new_listings: list[JobListing]) -> None:
 
 
 def main() -> int:
-    print("Avvio ricerca annunci tramite Strategia Ibrida (Playwright + Gemini/Regex)...")
+    print(f"Avvio ricerca annunci tramite Strategia Ibrida (Playwright + {GEMINI_MODEL}/Regex)...")
     seen_urls = load_seen_urls()
     is_first_run = len(seen_urls) == 0
 
