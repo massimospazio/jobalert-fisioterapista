@@ -1,25 +1,9 @@
-- name: Esegui Scraper in Modalità Test
-      env:
-        GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}  # Se configurata nei Secrets
-        ZENROWS_KEY: ${{ secrets.ZENROWS_KEY }}        # Se configurata nei Secrets
-        DRY_RUN: "true"
-      run: python scraper.py
-
-    - name: Salva Report come Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: report-risultati
-        path: |
-          preview.html
-          risultati.txt
-        if-no-files-found: ignore  # Evita il fallimento della pipeline se non ci sono nuove offerte
-  name: Job Scraper & Alert System
+name: Job Scraper & Alert System
 
 on:
-  workflow_dispatch: # <--- Questa riga abilita il tasto "Run workflow"
+  workflow_dispatch:
   schedule:
-    - cron: '0 8 * * *' # (opzionale) per le esecuzioni automatiche
+    - cron: '0 8 * * *'
 
 jobs:
   run-scraper:
@@ -39,13 +23,22 @@ jobs:
           pip install -r requirements.txt
           playwright install chromium --with-deps
 
-      - name: Run Scraper Script
+      - name: Esegui Scraper
         env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           ZENROWS_KEY: ${{ secrets.ZENROWS_KEY }}
-          GMAIL_USER: ${{ secrets.GMAIL_USER }}
-          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
           EMAIL_TO: ${{ secrets.EMAIL_TO }}
-          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-          SEND_BASELINE_EMAIL: "true"
+          DRY_RUN: "true"
         run: python scraper.py
+
+      - name: Salva Report come Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: report-risultati
+          path: |
+            preview.html
+            risultati.txt
+          if-no-files-found: ignore
