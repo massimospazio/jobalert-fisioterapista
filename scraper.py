@@ -406,7 +406,11 @@ def main() -> int:
                 print("   [SCARTATA]: Non è un'offerta di lavoro valida.")
 
     print(f"\nTotale nuove offerte valide trovate: {len(all_listings)}")
-
+# Inserisci questo blocco nel main() subito prima del controllo "if is_first_run:"
+if all_listings:
+    preview_path = Path(__file__).parent / "preview.html"
+    preview_path.write_text(build_email_html(all_listings), encoding="utf-8")
+    print(f"\n📄 Anteprima generata con successo: {preview_path.resolve()}")
     if is_first_run:
         send_baseline_email = os.environ.get("SEND_BASELINE_EMAIL", "false").lower() == "true"
         if send_baseline_email and all_listings:
