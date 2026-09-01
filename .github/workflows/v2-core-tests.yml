@@ -18,17 +18,19 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install core dependencies
-        run: pip install PyYAML>=6.0
+      - name: Install v2 dependencies
+        run: pip install "PyYAML>=6.0" requests beautifulsoup4
 
       - name: Run unit tests
         run: python -m unittest tests/test_core.py -v
 
-      - name: Run demo audit
+      - name: Run Bakeca audit
         run: python main_v2.py
 
       - name: Upload audit log
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: v2-core-audit
           path: logs/*.jsonl
+          if-no-files-found: warn
