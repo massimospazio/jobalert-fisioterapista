@@ -41,6 +41,20 @@ jobs:
           path: diagnostics_zenrows/*
           if-no-files-found: warn
 
+      - name: Probe Brave Search on Bakeca
+        if: ${{ env.BRAVE_API_KEY != '' }}
+        env:
+          BRAVE_API_KEY: ${{ secrets.BRAVE_API_KEY }}
+        run: python tools/brave_probe.py
+
+      - name: Upload Brave diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: brave-bakeca-diagnostics
+          path: diagnostics_brave/*
+          if-no-files-found: warn
+
       - name: Probe Subito and Lavoro.it
         run: python tools/browser_probe.py
 
