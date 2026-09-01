@@ -1,20 +1,13 @@
 #!/usr/bin/env python3
-"""
-Job alert per "fisioterapista" a Roma e provincia.
-Utilizza Google News RSS per evitare blocchi IP e Gemini per estrarre
-un elenco strutturato di informazioni da ciascun annuncio.
-"""
-
 import json
 import os
 import smtplib
 import sys
-import xml.etree.ElementTree as ET
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from pathlib import Path
-from urllib.parse import quote
+from urllib.parse import quote, urlparse
 
 import requests
 from bs4 import BeautifulSoup
@@ -22,7 +15,7 @@ from google import genai
 from google.genai import types
 
 STATE_FILE = Path(__file__).parent / "state.json"
-TIMEOUT = 20
+TIMEOUT = 45
 ND = "n.d."
 
 HEADERS = {
@@ -55,39 +48,65 @@ class JobListing:
         return self.url
 
 
-def analyze_with_gemini(title: str, snippet: str, link: str, pub_date: str) -> JobListing:
-    """Usa Gemini per estrarre dati strutturati dal testo dell'annuncio."""
+def fetch_with_zenrows(target_url: str) -> str | None:
+    """Scarica il contenuto HTML della pagina passando tramite l'API di ZenRows."""
+    zenrows_key = os.environ.get("ZENROWS_KEY")
+    if not zenrows_key:
+        print("ZENROWS_KEY non trovata nei Secret di GitHub!", file=sys.stderr)
+        return None
+
+    api_url = f"https://api.zenrows.com/v1/?key={zenrows_key}&url={quote(target_url)}&js_render=true"
+    
+    try:
+        resp = requests.get(api_url, timeout=TIMEOUT)
+        resp.raise_for_status()
+        return resp.text
+    except Exception as e:
+        print(f"Errore download ZenRows per {target_url}: {e}", file=sys.stderr)
+        return None
+
+
+def analyze_with_gemini(text_content: str, url: str) -> JobListing | None:
+    """Usa Gemini per validare se si tratta di una vera offerta ed estrarne i dati."""
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
-        print("GEMINI_API_KEY non trovata, imposto campi su n.d.", file=sys.stderr)
-        return JobListing(title=title, url=link, published_date=pub_date)
+        print("GEMINI_API_KEY non trovata.", file=sys.stderr)
+        return None
 
     client = genai.Client(api_key=api_key)
     
     prompt = f"""
-    Analizza il seguente annuncio di lavoro per fisioterapista ed estrai le informazioni richieste in formato JSON.
-    Non inventare MAI alcuna informazione: se un dato non è espressamente specificato nel testo, inserisci rigorosamente "n.d.".
+    Analizza il seguente testo estratto da una pagina web o annuncio di lavoro.
 
-    Testo Annuncio:
-    Titolo: {title}
-    Descrizione/Snippet: {snippet}
-    Data pubblicazione: {pub_date}
+    Testo:
+    {text_content[:3500]}
 
-    Restituisci un oggetto JSON con i seguenti campi esatti:
-    - title: titolo dell'annuncio
-    - company: nome dell'azienda/struttura che cerca
-    - source: fonte o portale originale (se deducibile)
-    - location: sede/zona di lavoro (es. Roma, Albano Laziale, ecc.)
-    - published_date: data pubblicazione (usa {pub_date} se non specificata diversamente)
-    - piva_required: "Richiesta", "Non richiesta" oppure "n.d."
-    - employment_time: "Full-time", "Part-time", "Flessibile" oppure "n.d."
-    - contract_duration: "Determinato", "Indeterminato", "Libera professione", "Stage" oppure "n.d."
-    - deadline: data di scadenza della candidatura o "n.d."
-    - company_type: "Cooperativa", "Azienda/Società", "Studio privato", "Pubblico/SSN" oppure "n.d."
-    - is_adi: "Sì" se riguarda Assistenza Domiciliare Integrata (ADI), altrimenti "No" o "n.d."
-    - salary: retribuzione indicata o "n.d."
-    - experience_required: esperienza richiesta in anni/livello o "n.d."
-    - albo_required: "Richiesta", "Non richiesta" oppure "n.d."
+    PASSAGGIO 1 (Filtro):
+    Verifica se questo testo rappresenta un'OFFERTA DI LAVORO / SELEZIONE / CONCORSO reale per FISIOTERAPISTA a Roma o provincia.
+    Imposta "is_job_offer": false se si tratta di articoli di giornale, cronaca, notizie di infortuni, blog generici o annunci non pertinenti.
+
+    PASSAGGIO 2 (Estrazione):
+    Se È una vera offerta di lavoro, imposta "is_job_offer": true ed estrai i dati.
+    Non inventare MAI nulla: se un parametro manca, inserisci rigorosamente "n.d.".
+
+    Restituisci un JSON con questa struttura esatta:
+    {{
+      "is_job_offer": true/false,
+      "title": "titolo dell'annuncio",
+      "company": "nome azienda o studio",
+      "source": "fonte/portale",
+      "location": "sede o zona",
+      "published_date": "data pubblicazione o n.d.",
+      "piva_required": "Richiesta/Non richiesta/n.d.",
+      "employment_time": "Full-time/Part-time/Flessibile/n.d.",
+      "contract_duration": "Determinato/Indeterminato/Libera professione/Stage/n.d.",
+      "deadline": "scadenza o n.d.",
+      "company_type": "Cooperativa/Azienda/Società/Studio privato/Pubblico/SSN/n.d.",
+      "is_adi": "Sì/No/n.d.",
+      "salary": "retribuzione o n.d.",
+      "experience_required": "esperienza richiesta o n.d.",
+      "albo_required": "Richiesta/Non richiesta/n.d."
+    }}
     """
 
     try:
@@ -96,43 +115,39 @@ def analyze_with_gemini(title: str, snippet: str, link: str, pub_date: str) -> J
             contents=prompt,
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
-                temperature=0.1,
+                temperature=0.0,
             ),
         )
         data = json.loads(response.text)
-        data["url"] = link
+        
+        if not data.get("is_job_offer", False):
+            return None
+
+        data.pop("is_job_offer", None)
+        data["url"] = url
         return JobListing(**data)
     except Exception as e:
-        print(f"Errore analisi Gemini per {link}: {e}", file=sys.stderr)
-        return JobListing(title=title, url=link, published_date=pub_date)
+        print(f"Errore Gemini per {url}: {e}", file=sys.stderr)
+        return None
 
 
-def fetch_google_news_jobs() -> list[JobListing]:
-    """Cerca annunci tramite il feed RSS di Google News e li analizza."""
-    query = quote('fisioterapista (Roma OR "Castelli Romani" OR "provincia di Roma") (offerte OR concorso OR privato)')
-    rss_url = f"https://news.google.com/rss/search?q={query}&hl=it&gl=IT&ceid=IT:it"
+def extract_job_urls(html_content: str, base_url: str) -> list[tuple[str, str]]:
+    """Estrae i link dei singoli annunci presenti nella pagina dei risultati."""
+    soup = BeautifulSoup(html_content, "html.parser")
+    candidates = []
     
-    resp = requests.get(rss_url, headers=HEADERS, timeout=TIMEOUT)
-    resp.raise_for_status()
-    
-    root = ET.fromstring(resp.content)
-    results = []
-    
-    for item in root.findall(".//item"):
-        title = item.findtext("title", default="")
-        link = item.findtext("link", default="")
-        pub_date = item.findtext("pubDate", default="")[:16]
+    for a in soup.find_all("a", href=True):
+        text = a.get_text(strip=True)
+        href = a["href"]
         
-        # Estrazione dello snippet HTML all'interno del feed
-        desc_html = item.findtext("description", default="")
-        snippet = BeautifulSoup(desc_html, "html.parser").get_text(strip=True) if desc_html else ""
-        
-        if "fisioterapista" in title.lower() or "fisioterapista" in snippet.lower():
-            print(f"Analisi annuncio: {title[:50]}...")
-            listing = analyze_with_gemini(title, snippet, link, pub_date)
-            results.append(listing)
+        # Filtro visivo primario sui link per isolare quelli rilevanti
+        if href and (len(text) > 10 or "fisioterapista" in href.lower()):
+            if href.startswith("/"):
+                parsed = urlparse(base_url)
+                href = f"{parsed.scheme}://{parsed.netloc}{href}"
+            candidates.append((text, href))
             
-    return results
+    return candidates
 
 
 def load_seen_urls() -> set:
@@ -189,7 +204,6 @@ def build_email_html(new_listings: list[JobListing]) -> str:
           <tbody>{"".join(rows)}</tbody>
         </table>
       </div>
-      <p style="color:#777;margin-top:15px;font-size:11px;">Le informazioni mancanti nell'annuncio originale sono indicate con "n.d." (nessun dato inventato).</p>
     </body></html>
     """
 
@@ -211,23 +225,54 @@ def send_email(subject: str, new_listings: list[JobListing]) -> None:
 
 
 def main() -> int:
-    print("Avvio ricerca e analisi annunci con Gemini...")
+    print("Avvio ricerca annunci tramite ZenRows + Gemini...")
     seen_urls = load_seen_urls()
     is_first_run = len(seen_urls) == 0
 
-    all_listings = fetch_google_news_jobs()
-    print(f"Totale annunci individuati: {len(all_listings)}")
+    # Portali di ricerca target
+    target_urls = [
+        "https://www.bakeca.it/offerte-lavoro/roma/keyword/fisioterapista/",
+        "https://it.lavoro.it/offerte-lavoro-fisioterapista-roma.html"
+    ]
+
+    all_listings = []
+
+    for target in target_urls:
+        print(f"\nScansione portale: {target}")
+        html = fetch_with_zenrows(target)
+        if not html:
+            continue
+
+        candidates = extract_job_urls(html, target)
+        print(f"Estratti {len(candidates)} link potenziali. Analisi in corso con Gemini...")
+
+        # Analizziamo i link più rilevanti scartando quelli già memorizzati
+        for text, url in candidates[:10]:
+            if url in seen_urls or any(l.url == url for l in all_listings):
+                continue
+            
+            # Filtro rapido sul testo/URL prima di chiamare l'API
+            if not any(k in url.lower() or k in text.lower() for k in ["fisioterapista", "offerta", "annuncio", "job", "lavoro"]):
+                continue
+
+            print(f"  Analizzo: {text[:40]}... -> {url}")
+            listing = analyze_with_gemini(f"{text} - URL: {url}", url)
+            
+            if listing:
+                print(f"   [OFFERTA CONFERMATA]: {listing.title}")
+                all_listings.append(listing)
+            else:
+                print(f"   [SCARTATA]: Non è un'offerta valida.")
+
+    print(f"\nTotale nuove offerte valide trovate: {len(all_listings)}")
 
     if is_first_run:
         send_baseline_email = os.environ.get("SEND_BASELINE_EMAIL", "false").lower() == "true"
-
         if send_baseline_email and all_listings:
-            print(f"Primo avvio con test attivo: invio e-mail con i {len(all_listings)} annunci strutturati.")
-            subject = f"🧪 TEST — Baseline Struct: {len(all_listings)} annunci trovati"
-            send_email(subject, all_listings)
-            print("E-mail di test inviata con successo.")
+            print(f"Primo avvio (Test): invio e-mail con i {len(all_listings)} annunci trovati.")
+            send_email(f"🧪 TEST ZenRows — Baseline: {len(all_listings)} annunci", all_listings)
         else:
-            print("Primo avvio: registro gli annunci attuali come baseline. Nessuna e-mail inviata.")
+            print("Primo avvio: registro gli annunci attuali come baseline.")
 
         save_seen_urls({j.key() for j in all_listings})
         return 0
@@ -236,9 +281,7 @@ def main() -> int:
 
     if new_listings:
         print(f"Trovati {len(new_listings)} nuovi annunci! Invio e-mail...")
-        subject = f"🔎 {len(new_listings)} Nuove Offerte Fisioterapista Roma"
-        send_email(subject, new_listings)
-        print("E-mail inviata con successo.")
+        send_email(f"🔎 {len(new_listings)} Nuove Offerte Fisioterapista Roma", new_listings)
     else:
         print("Nessuna novità rispetto all'ultima scansione.")
 
