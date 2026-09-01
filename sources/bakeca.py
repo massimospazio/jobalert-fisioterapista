@@ -1,21 +1,18 @@
 import re
+from pathlib import Path
 from urllib.parse import urljoin
 
-import requests
 from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright
 
 from core.models import JobListing
 
 
-HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/151.0.0.0 Safari/537.36"
-    ),
-    "Accept-Language": "it-IT,it;q=0.9,en;q=0.8",
-}
+USER_AGENT = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/151.0.0.0 Safari/537.36"
+)
 
 
 def _value(text: str, label: str) -> str:
@@ -47,14 +44,34 @@ def _employment(value: str) -> str:
     return "non_specificato"
 
 
-def _extract_urls(html: str, base_url: str) -> list[str]:
+def _candidate_links(html: str, base_url: str) -> list[str]:
     soup = BeautifulSoup(html, "lxml")
     urls: list[str] = []
-    for anchor in soup.select('a[href*="/dettaglio/"]'):
-        url = urljoin(base_url, anchor.get("href", ""))
-        if url and "bakeca.it/dettaglio/" in url and url not in urls:
-            urls.append(url)
+    for anchor in soup.find_all("a", href=True):
+        href = anchor.get("href", "").strip()
+        if not href:
+            continue
+        url = urljoin(base_url, href)
+        lowered = url.lower()
+        if "bakeca.it" not in lowered:
+            continue
+        if any(token in lowered for token in ["/annunci/", "/offerte-lavoro/", "/dettaglio/"]):
+            if url not in urls and url.rstrip("/") != base_url.rstrip("/"):
+                urls.append(url)
     return urls
+
+
+def _is_probable_job_url(url: str) -> bool:
+    lowered = url.lower()
+    blocked_fragments = [
+        "?keyword=",
+        "/luogo/",
+        "/categoria/",
+        "/annunci/medicina-salute-assistenza/$",
+    ]
+    if any(fragment in lowered for fragment in blocked_fragments):
+        return False
+    return "bakeca.it" in lowered
 
 
 def _job_from_html(url: str, html: str, source_config: dict, locations: dict) -> JobListing:
@@ -90,22 +107,20 @@ def _job_from_html(url: str, html: str, source_config: dict, locations: dict) ->
     )
 
 
-def _collect_requests(source_config: dict, locations: dict) -> list[JobListing]:
-    search_url = source_config["search_url"]
-    response = requests.get(search_url, headers=HEADERS, timeout=25)
-    response.raise_for_status()
-    urls = _extract_urls(response.text, search_url)
-
-    limit = int(source_config.get("max_results", 30))
-    jobs: list[JobListing] = []
-    for url in urls[:limit]:
-        detail = requests.get(url, headers=HEADERS, timeout=25)
-        detail.raise_for_status()
-        jobs.append(_job_from_html(url, detail.text, source_config, locations))
-    return jobs
+def _write_diagnostics(html: str, links: list[str], current_url: str) -> None:
+    diagnostics = Path("diagnostics")
+    diagnostics.mkdir(parents=True, exist_ok=True)
+    (diagnostics / "bakeca-search.html").write_text(html, encoding="utf-8")
+    (diagnostics / "bakeca-links.txt").write_text(
+        "CURRENT_URL: " + current_url + "\n\n" + "\n".join(links),
+        encoding="utf-8",
+    )
+    print(f"BAKECA_DIAGNOSTIC current_url={current_url} links_found={len(links)}")
+    for url in links[:20]:
+        print(f"BAKECA_LINK {url}")
 
 
-def _collect_browser(source_config: dict, locations: dict) -> list[JobListing]:
+def collect(source_config: dict, locations: dict) -> list[JobListing]:
     search_url = source_config["search_url"]
     limit = int(source_config.get("max_results", 30))
     jobs: list[JobListing] = []
@@ -113,32 +128,32 @@ def _collect_browser(source_config: dict, locations: dict) -> list[JobListing]:
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(headless=True)
         context = browser.new_context(
-            user_agent=HEADERS["User-Agent"],
+            user_agent=USER_AGENT,
             locale="it-IT",
             viewport={"width": 1440, "height": 1200},
         )
         page = context.new_page()
-        page.goto(search_url, wait_until="domcontentloaded", timeout=45000)
+        response = page.goto(search_url, wait_until="networkidle", timeout=60000)
         page.wait_for_timeout(1500)
-        urls = _extract_urls(page.content(), search_url)
+
+        html = page.content()
+        candidates = _candidate_links(html, page.url)
+        _write_diagnostics(html, candidates, page.url)
+
+        urls = [url for url in candidates if _is_probable_job_url(url)]
+        print(
+            f"BAKECA_BROWSER status={response.status if response else 'n/a'} "
+            f"candidate_links={len(candidates)} probable_jobs={len(urls)}"
+        )
 
         for url in urls[:limit]:
             page.goto(url, wait_until="domcontentloaded", timeout=45000)
             page.wait_for_timeout(500)
-            jobs.append(_job_from_html(url, page.content(), source_config, locations))
+            job = _job_from_html(url, page.content(), source_config, locations)
+            if job.title and "fisioterap" in f"{job.title}\n{job.text}".lower():
+                jobs.append(job)
 
         context.close()
         browser.close()
 
     return jobs
-
-
-def collect(source_config: dict, locations: dict) -> list[JobListing]:
-    try:
-        return _collect_requests(source_config, locations)
-    except requests.HTTPError as exc:
-        status = exc.response.status_code if exc.response is not None else None
-        if status != 403:
-            raise
-        print("SOURCE_FALLBACK bakeca: HTTP 403, provo browser Playwright")
-        return _collect_browser(source_config, locations)
