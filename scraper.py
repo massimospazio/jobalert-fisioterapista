@@ -3,16 +3,18 @@ import json
 import os
 import smtplib
 import sys
+import time
 from dataclasses import dataclass
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import quote, urlparse
 
 import requests
 from bs4 import BeautifulSoup
 from google import genai
 from google.genai import types
+from playwright.sync_api import sync_playwright
 
 STATE_FILE = Path(__file__).parent / "state.json"
 TIMEOUT = 45
@@ -41,9 +43,25 @@ class JobListing:
         return self.url
 
 
-from urllib.parse import quote
+def fetch_with_playwright(target_url: str) -> str | None:
+    """Scarica la pagina simulando un vero browser Chromium con Playwright (Gratuito)."""
+    try:
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            context = browser.new_context(
+                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+                viewport={"width": 1280, "height": 800}
+            )
+            page = context.new_page()
+            page.goto(target_url, wait_until="domcontentloaded", timeout=30000)
+            page.wait_for_timeout(2000)
+            content = page.content()
+            browser.close()
+            return content
+    except Exception as e:
+        print(f"Errore Playwright per {target_url}: {e}", file=sys.stderr)
+        return None
 
-import time
 
 def fetch_page(target_url: str) -> str | None:
     """Strategia Ibrida: 
@@ -52,11 +70,11 @@ def fetch_page(target_url: str) -> str | None:
     """
     print(f"Tentativo download gratuito (Playwright): {target_url}")
     html = fetch_with_playwright(target_url)
-    
+
     # Se Playwright ha successo e il contenuto non è un blocco evidente, lo restituisce
     if html and len(html) > 1000 and "Access Denied" not in html and "Cloudflare" not in html:
         return html
-        
+
     print(f"Playwright non sufficiente. Attivazione fallback ZenRows per: {target_url}")
     zenrows_key = os.environ.get("ZENROWS_KEY", "").strip()
     if not zenrows_key:
@@ -147,6 +165,7 @@ def analyze_with_gemini(text_content: str, url: str) -> JobListing | None:
             print(f"Errore Gemini per {url}: {e}", file=sys.stderr)
             return None
 
+
 def extract_job_urls(html_content: str, base_url: str) -> list[tuple[str, str]]:
     """Estrae i link specifici degli annunci in base al portale."""
     soup = BeautifulSoup(html_content, "html.parser")
@@ -234,9 +253,13 @@ def build_email_html(new_listings: list[JobListing]) -> str:
 
 
 def send_email(subject: str, new_listings: list[JobListing]) -> None:
-    gmail_user = os.environ["GMAIL_USER"]
-    gmail_app_password = os.environ["GMAIL_APP_PASSWORD"]
+    gmail_user = os.environ.get("GMAIL_USER") or os.environ.get("EMAIL_USER")
+    gmail_app_password = os.environ.get("GMAIL_APP_PASSWORD") or os.environ.get("EMAIL_PASS")
     email_to = os.environ.get("EMAIL_TO", gmail_user)
+
+    if not gmail_user or not gmail_app_password:
+        print("Credenziali e-mail non configurate negli Environment Variable.", file=sys.stderr)
+        return
 
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
@@ -250,7 +273,7 @@ def send_email(subject: str, new_listings: list[JobListing]) -> None:
 
 
 def main() -> int:
-    print("Avvio ricerca annunci tramite ZenRows + Gemini...")
+    print("Avvio ricerca annunci tramite Strategia Ibrida (Playwright + ZenRows + Gemini)...")
     seen_urls = load_seen_urls()
     is_first_run = len(seen_urls) == 0
 
@@ -263,7 +286,7 @@ def main() -> int:
 
     for target in target_urls:
         print(f"\nScansione portale: {target}")
-        html = fetch_with_zenrows(target)
+        html = fetch_page(target)
         if not html:
             continue
 
@@ -289,7 +312,7 @@ def main() -> int:
 
         for text, url in valid_candidates[:10]:
             print(f"\n  Scarico dettagli per: {text[:40]}... -> {url}")
-            detail_html = fetch_with_zenrows(url)
+            detail_html = fetch_page(url)
 
             if not detail_html:
                 print("   [ERRORE]: Impossibile scaricare la pagina dell'annuncio.")
@@ -316,7 +339,7 @@ def main() -> int:
         send_baseline_email = os.environ.get("SEND_BASELINE_EMAIL", "false").lower() == "true"
         if send_baseline_email and all_listings:
             print(f"Primo avvio (Test): invio e-mail con i {len(all_listings)} annunci trovati.")
-            send_email(f"🧪 TEST ZenRows — Baseline: {len(all_listings)} annunci", all_listings)
+            send_email(f"🧪 TEST Strategia Ibrida — Baseline: {len(all_listings)} annunci", all_listings)
         else:
             print("Primo avvio: registro gli annunci attuali come baseline.")
 
