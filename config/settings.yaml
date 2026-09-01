@@ -1,0 +1,17 @@
+search:
+  profession: fisioterapista
+  region: Lazio
+  provinces:
+    - Roma
+
+home_location:
+  name: Albano Laziale
+  latitude: 41.7318
+  longitude: 12.6583
+
+audit:
+  output_dir: logs
+  save_original_text: true
+
+scoring:
+  minimum_score_for_notification: 55
