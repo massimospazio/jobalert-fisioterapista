@@ -3,7 +3,7 @@ from pathlib import Path
 from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError, sync_playwright
 
 from core.models import JobListing
 
@@ -67,7 +67,6 @@ def _is_probable_job_url(url: str) -> bool:
         "?keyword=",
         "/luogo/",
         "/categoria/",
-        "/annunci/medicina-salute-assistenza/$",
     ]
     if any(fragment in lowered for fragment in blocked_fragments):
         return False
@@ -116,7 +115,7 @@ def _write_diagnostics(html: str, links: list[str], current_url: str) -> None:
         encoding="utf-8",
     )
     print(f"BAKECA_DIAGNOSTIC current_url={current_url} links_found={len(links)}")
-    for url in links[:20]:
+    for url in links[:30]:
         print(f"BAKECA_LINK {url}")
 
 
@@ -133,9 +132,13 @@ def collect(source_config: dict, locations: dict) -> list[JobListing]:
             viewport={"width": 1440, "height": 1200},
         )
         page = context.new_page()
-        response = page.goto(search_url, wait_until="networkidle", timeout=60000)
-        page.wait_for_timeout(1500)
+        response = None
+        try:
+            response = page.goto(search_url, wait_until="domcontentloaded", timeout=30000)
+        except PlaywrightTimeoutError:
+            print("BAKECA_NAVIGATION_TIMEOUT: uso comunque il contenuto parzialmente caricato")
 
+        page.wait_for_timeout(3000)
         html = page.content()
         candidates = _candidate_links(html, page.url)
         _write_diagnostics(html, candidates, page.url)
@@ -147,8 +150,11 @@ def collect(source_config: dict, locations: dict) -> list[JobListing]:
         )
 
         for url in urls[:limit]:
-            page.goto(url, wait_until="domcontentloaded", timeout=45000)
-            page.wait_for_timeout(500)
+            try:
+                page.goto(url, wait_until="domcontentloaded", timeout=30000)
+            except PlaywrightTimeoutError:
+                print(f"BAKECA_DETAIL_TIMEOUT {url}")
+            page.wait_for_timeout(750)
             job = _job_from_html(url, page.content(), source_config, locations)
             if job.title and "fisioterap" in f"{job.title}\n{job.text}".lower():
                 jobs.append(job)
