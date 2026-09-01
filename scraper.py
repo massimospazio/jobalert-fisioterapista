@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from pathlib import Path
-from urllib.parse import quote, urlparse
+from urllib.parse import urlparse
 
 import requests
 from bs4 import BeautifulSoup
@@ -18,13 +18,6 @@ STATE_FILE = Path(__file__).parent / "state.json"
 TIMEOUT = 45
 ND = "n.d."
 
-HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/128.0.0.0 Safari/537.36"
-    )
-}
 
 @dataclass
 class JobListing:
@@ -48,24 +41,21 @@ class JobListing:
         return self.url
 
 
-from zenrows import ZenRowsClient
-
 def fetch_with_zenrows(target_url: str) -> str | None:
-    """Scarica il contenuto HTML della pagina tramite l'API aggiornata di ZenRows."""
+    """Scarica il contenuto HTML della pagina tramite l'API di ZenRows."""
     zenrows_key = os.environ.get("ZENROWS_KEY", "").strip()
     if not zenrows_key:
         print("ZENROWS_KEY non trovata nei Secret di GitHub!", file=sys.stderr)
         return None
 
-    # Usiamo l'endpoint aggiornato senza /v1/ per evitare il 404
     params = {
         "apikey": zenrows_key,
         "url": target_url,
         "js_render": "true"
     }
-    
+
     try:
-        resp = requests.get("https://api.zenrows.com/", params=params, timeout=TIMEOUT)
+        resp = requests.get("https://api.zenrows.com/v1/", params=params, timeout=TIMEOUT)
         resp.raise_for_status()
         return resp.text
     except Exception as e:
@@ -81,7 +71,7 @@ def analyze_with_gemini(text_content: str, url: str) -> JobListing | None:
         return None
 
     client = genai.Client(api_key=api_key)
-    
+
     prompt = f"""
     Analizza il seguente testo estratto da una pagina web o annuncio di lavoro.
 
@@ -118,7 +108,7 @@ def analyze_with_gemini(text_content: str, url: str) -> JobListing | None:
 
     try:
         response = client.models.generate_content(
-            model="gemini-1.5-flash",  # Usiamo il modello standard supportato
+            model="gemini-1.5-flash",
             contents=prompt,
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
@@ -126,7 +116,7 @@ def analyze_with_gemini(text_content: str, url: str) -> JobListing | None:
             ),
         )
         data = json.loads(response.text)
-        
+
         if not data.get("is_job_offer", False):
             return None
 
@@ -139,21 +129,30 @@ def analyze_with_gemini(text_content: str, url: str) -> JobListing | None:
 
 
 def extract_job_urls(html_content: str, base_url: str) -> list[tuple[str, str]]:
-    """Estrae i link dei singoli annunci presenti nella pagina dei risultati."""
+    """Estrae i link specifici degli annunci in base al portale."""
     soup = BeautifulSoup(html_content, "html.parser")
     candidates = []
-    
+
     for a in soup.find_all("a", href=True):
         text = a.get_text(strip=True)
         href = a["href"]
-        
-        # Filtro visivo primario sui link per isolare quelli rilevanti
-        if href and (len(text) > 10 or "fisioterapista" in href.lower()):
-            if href.startswith("/"):
-                parsed = urlparse(base_url)
-                href = f"{parsed.scheme}://{parsed.netloc}{href}"
-            candidates.append((text, href))
-            
+
+        if href.startswith("/"):
+            parsed = urlparse(base_url)
+            href = f"{parsed.scheme}://{parsed.netloc}{href}"
+
+        href_lower = href.lower()
+
+        if "bakeca.it" in base_url:
+            if "/dettaglio/" in href_lower or "fisioterapista" in href_lower:
+                candidates.append((text, href))
+        elif "lavoro.it" in base_url:
+            if ("/offerta/" in href_lower or "/annuncio/" in href_lower or "fisioterapista" in href_lower) and not href_lower.endswith(".html"):
+                candidates.append((text, href))
+        else:
+            if "fisioterapista" in href_lower or "fisioterapista" in text.lower():
+                candidates.append((text, href))
+
     return candidates
 
 
@@ -196,8 +195,8 @@ def build_email_html(new_listings: list[JobListing]) -> str:
         </tr>""")
 
     headers = [
-        "Titolo", "Azienda", "Fonte", "Sede", "Pubblicato", 
-        "P.IVA", "Orario", "Contratto", "Scadenza", "Tipo Società", 
+        "Titolo", "Azienda", "Fonte", "Sede", "Pubblicato",
+        "P.IVA", "Orario", "Contratto", "Scadenza", "Tipo Società",
         "ADI", "Retribuzione", "Esperienza", "Albo TSRM/PSTRP"
     ]
     header_html = "".join(f'<th style="padding:8px;border:1px solid #ddd;background:#2c3e50;color:#fff;font-size:11px;">{h}</th>' for h in headers)
@@ -236,7 +235,6 @@ def main() -> int:
     seen_urls = load_seen_urls()
     is_first_run = len(seen_urls) == 0
 
-    # Portali di ricerca target
     target_urls = [
         "https://www.bakeca.it/offerte-lavoro/roma/keyword/fisioterapista/",
         "https://it.lavoro.it/offerte-lavoro-fisioterapista-roma.html"
@@ -253,51 +251,45 @@ def main() -> int:
         candidates = extract_job_urls(html, target)
         print(f"Estratti {len(candidates)} link totali. Filtraggio dei link pertinenti...")
 
-        # 1. Filtriamo prima tutti i link pertinenti
         valid_candidates = []
+        seen_candidate_urls = set()
+
         for text, url in candidates:
             if url in seen_urls or any(l.url == url for l in all_listings):
                 continue
 
             url_lower = url.lower()
-            text_lower = text.lower()
-
-            # Escludi le pagine di ricerca/pagine successive e mantieni solo gli annunci
-            if "/offerte-lavoro/roma/keyword/" in url_lower or "page=" in url_lower:
+            if "keyword/fisioterapista" in url_lower or "page=" in url_lower:
                 continue
 
-            if ("fisioterapista" in url_lower or "fisioterapista" in text_lower or "annuncio" in url_lower or "dettaglio" in url_lower):
+            if url not in seen_candidate_urls:
+                seen_candidate_urls.add(url)
                 valid_candidates.append((text, url))
 
-        print(f"Trovati {len(valid_candidates)} link di annunci non ancora visti.")
+        print(f"Trovati {len(valid_candidates)} link di annunci potenziali non ancora visti.")
 
-        # 2. Analizziamo i primi 10 annunci pertinenti scaricando la pagina di dettaglio
         for text, url in valid_candidates[:10]:
             print(f"\n  Scarico dettagli per: {text[:40]}... -> {url}")
             detail_html = fetch_with_zenrows(url)
 
             if not detail_html:
-                print(f"   [ERRORE]: Impossibile scaricare la pagina dell'annuncio.")
+                print("   [ERRORE]: Impossibile scaricare la pagina dell'annuncio.")
                 continue
 
-            # Converti l'HTML della pagina di dettaglio in testo pulito per Gemini
-            from bs4 import BeautifulSoup
             soup = BeautifulSoup(detail_html, "html.parser")
-            
-            # Rimuovi script e stili prima di estrarre il testo
             for element in soup(["script", "style", "nav", "footer", "header"]):
                 element.decompose()
-            
+
             page_text = soup.get_text(separator=" ", strip=True)
 
-            print(f"   Analisi con Gemini in corso...")
+            print("   Analisi con Gemini in corso...")
             listing = analyze_with_gemini(page_text, url)
 
             if listing:
                 print(f"   [OFFERTA CONFERMATA]: {listing.title} ({listing.company})")
                 all_listings.append(listing)
             else:
-                print(f"   [SCARTATA]: Non è un'offerta di lavoro valida secondo Gemini.")
+                print("   [SCARTATA]: Non è un'offerta di lavoro valida secondo Gemini.")
 
     print(f"\nTotale nuove offerte valide trovate: {len(all_listings)}")
 
