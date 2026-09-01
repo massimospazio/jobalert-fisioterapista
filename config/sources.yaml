@@ -1,0 +1,15 @@
+sources:
+  - id: bakeca
+    name: Bakeca
+    enabled: true
+    search_url: "https://www.bakeca.it/offerte-lavoro/roma/?q=fisioterapista"
+
+  - id: subito
+    name: Subito
+    enabled: true
+    search_url: "https://www.subito.it/annunci-lazio/vendita/offerte-lavoro/roma/?q=fisioterapista"
+
+  - id: lavoro_it
+    name: Lavoro.it
+    enabled: false
+    search_url: "https://www.lavoro.it/"
