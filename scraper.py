@@ -283,12 +283,16 @@ def extract_job_urls(
 
         href_lower = href.lower()
         text_lower = text.lower()
-if "bakeca.it" in base_url:
-    # Bakeca spesso usa strutture del tipo /dettaglio/offerta/... oppure /offerte-lavoro/...
-    if "/dettaglio/" in href_lower or "/offerta/" in href_lower or "fisioterap" in href_lower or "fisioterap" in text_lower:
-        if not href_lower.endswith("/roma/"):  # Evita il link della categoria stessa
-            candidates.append((text, href))
-       
+
+        if "bakeca.it" in base_url:
+            if (
+                any(
+                    k in href_lower
+                    for k in ["/dettaglio/", "/offerta/", "fisioterap"]
+                )
+                or "fisioterap" in text_lower
+            ):
+                candidates.append((text, href))
 
         elif "subito.it" in base_url:
             if "/offerte-lavoro/" in href_lower and href_lower.endswith(".htm"):
