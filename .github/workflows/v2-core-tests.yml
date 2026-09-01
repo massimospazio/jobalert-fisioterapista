@@ -19,7 +19,10 @@ jobs:
           python-version: "3.11"
 
       - name: Install v2 dependencies
-        run: pip install "PyYAML>=6.0" requests beautifulsoup4
+        run: pip install "PyYAML>=6.0" requests beautifulsoup4 lxml playwright
+
+      - name: Install Chromium
+        run: python -m playwright install chromium --with-deps
 
       - name: Run unit tests
         run: python -m unittest tests/test_core.py -v
