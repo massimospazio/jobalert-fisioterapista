@@ -43,16 +43,25 @@ class JobListing:
 
 
 def fetch_with_zenrows(target_url: str) -> str | None:
-    """Scarica il contenuto HTML della pagina usando il client ufficiale ZenRows."""
+    """Scarica il contenuto HTML della pagina usando la REST API diretta di ZenRows."""
     zenrows_key = os.environ.get("ZENROWS_KEY", "").strip()
     if not zenrows_key:
         print("ZENROWS_KEY non trovata nei Secret di GitHub!", file=sys.stderr)
         return None
 
+    # URL base dell'API ZenRows
+    api_url = "https://api.zenrows.com/v1/"
+    
+    # Parametri richiesti da ZenRows
+    params = {
+        "apikey": zenrows_key,
+        "url": target_url,
+        "js_render": "true",
+        "premium_proxy": "true"  # Utile per portali protetti come Bakeca
+    }
+    
     try:
-        client = ZenRowsClient(zenrows_key)
-        params = {"js_render": "true"}
-        response = client.get(target_url, params=params)
+        response = requests.get(api_url, params=params, timeout=TIMEOUT)
         response.raise_for_status()
         return response.text
     except Exception as e:
