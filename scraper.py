@@ -102,7 +102,8 @@ def analyze_with_heuristics(text_content: str, url: str) -> JobListing | None:
     text_lower = text_content.lower()
 
     keywords_job = ["fisioterapista", "fisioterapia", "riabilitazione", "riabilitativo"]
-    keywords_neg = ["cerco lavoro", "offro ripetizioni", "badante", "pulizie", "colf"]
+   # Sostituisci keywords_neg con parole meno generiche
+    keywords_neg = ["cerco lavoro come", "offro ripetizioni", "badante", "pulizie", "colf", "cerco impiego"]
 
     if not any(k in text_lower for k in keywords_job):
         return None
@@ -229,10 +230,10 @@ def extract_job_urls(html_content: str, base_url: str) -> list[tuple[str, str]]:
 
         href_lower = href.lower()
         text_lower = text.lower()
-
-        if "bakeca.it" in base_url:
-            if "/dettaglio/" in href_lower or "fisioterap" in href_lower or "fisioterap" in text_lower:
-                candidates.append((text, href))
+    if "bakeca.it" in base_url:
+    if any(k in href_lower for k in ["/dettaglio/", "/offerta/", "fisioterap"]) or "fisioterap" in text_lower:
+        candidates.append((text, href))
+    
         elif "subito.it" in base_url:
             if "/offerte-lavoro/" in href_lower and href_lower.endswith(".htm"):
                 if any(k in href_lower for k in ["fisioterap", "riabilitaz", "sanitar", "studio", "clinica", "assistenza"]):
@@ -381,6 +382,10 @@ def main() -> int:
         print(f"Trovati {len(valid_candidates)} link di annunci potenziali non ancora visti.")
 
         for text, url in valid_candidates[:5]:
+        # Dentro il ciclo for text, url in valid_candidates[:5]:
+        print("   Analisi annuncio in corso...")
+        time.sleep(4)  # Mantiene le richieste sotto il limite RPM di Gemini
+        listing = analyze_with_gemini(page_text, url)
             print(f"\n  Scarico dettagli per: {text[:40]}... -> {url}")
             detail_html = fetch_page(url)
 
