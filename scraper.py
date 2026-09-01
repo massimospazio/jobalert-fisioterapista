@@ -118,7 +118,7 @@ def analyze_with_gemini(text_content: str, url: str) -> JobListing | None:
 
     try:
         response = client.models.generate_content(
-            model="gemini-2.5-flash",
+            model="gemini-1.5-flash",  # Usiamo il modello standard supportato
             contents=prompt,
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
@@ -251,25 +251,53 @@ def main() -> int:
             continue
 
         candidates = extract_job_urls(html, target)
-        print(f"Estratti {len(candidates)} link potenziali. Analisi in corso con Gemini...")
+        print(f"Estratti {len(candidates)} link totali. Filtraggio dei link pertinenti...")
 
-        # Analizziamo i link più rilevanti scartando quelli già memorizzati
-        for text, url in candidates[:10]:
+        # 1. Filtriamo prima tutti i link pertinenti
+        valid_candidates = []
+        for text, url in candidates:
             if url in seen_urls or any(l.url == url for l in all_listings):
                 continue
-            
-            # Filtro rapido sul testo/URL prima di chiamare l'API
-            if not any(k in url.lower() or k in text.lower() for k in ["fisioterapista", "offerta", "annuncio", "job", "lavoro"]):
+
+            url_lower = url.lower()
+            text_lower = text.lower()
+
+            # Escludi le pagine di ricerca/pagine successive e mantieni solo gli annunci
+            if "/offerte-lavoro/roma/keyword/" in url_lower or "page=" in url_lower:
                 continue
 
-            print(f"  Analizzo: {text[:40]}... -> {url}")
-            listing = analyze_with_gemini(f"{text} - URL: {url}", url)
+            if ("fisioterapista" in url_lower or "fisioterapista" in text_lower or "annuncio" in url_lower or "dettaglio" in url_lower):
+                valid_candidates.append((text, url))
+
+        print(f"Trovati {len(valid_candidates)} link di annunci non ancora visti.")
+
+        # 2. Analizziamo i primi 10 annunci pertinenti scaricando la pagina di dettaglio
+        for text, url in valid_candidates[:10]:
+            print(f"\n  Scarico dettagli per: {text[:40]}... -> {url}")
+            detail_html = fetch_with_zenrows(url)
+
+            if not detail_html:
+                print(f"   [ERRORE]: Impossibile scaricare la pagina dell'annuncio.")
+                continue
+
+            # Converti l'HTML della pagina di dettaglio in testo pulito per Gemini
+            from bs4 import BeautifulSoup
+            soup = BeautifulSoup(detail_html, "html.parser")
             
+            # Rimuovi script e stili prima di estrarre il testo
+            for element in soup(["script", "style", "nav", "footer", "header"]):
+                element.decompose()
+            
+            page_text = soup.get_text(separator=" ", strip=True)
+
+            print(f"   Analisi con Gemini in corso...")
+            listing = analyze_with_gemini(page_text, url)
+
             if listing:
-                print(f"   [OFFERTA CONFERMATA]: {listing.title}")
+                print(f"   [OFFERTA CONFERMATA]: {listing.title} ({listing.company})")
                 all_listings.append(listing)
             else:
-                print(f"   [SCARTATA]: Non è un'offerta valida.")
+                print(f"   [SCARTATA]: Non è un'offerta di lavoro valida secondo Gemini.")
 
     print(f"\nTotale nuove offerte valide trovate: {len(all_listings)}")
 
