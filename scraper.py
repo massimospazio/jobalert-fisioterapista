@@ -41,22 +41,21 @@ class JobListing:
         return self.url
 
 
+from urllib.parse import quote
+
 def fetch_with_zenrows(target_url: str) -> str | None:
-    """Scarica il contenuto HTML abilitando premium_proxy per i siti protetti."""
+    """Scarica la pagina codificando l'URL per evitare 404/422 su ZenRows."""
     zenrows_key = os.environ.get("ZENROWS_KEY", "").strip()
     if not zenrows_key:
         print("ZENROWS_KEY non trovata nei Secret di GitHub!", file=sys.stderr)
         return None
 
-    params = {
-        "apikey": zenrows_key,
-        "url": target_url,
-        "js_render": "true",
-        "premium_proxy": "true"  # Evita i blocchi/404 da parte dei Cloudflare di Bakeca
-    }
+    # Codifichiamo l'URL di destinazione per evitare problemi di parsing nel gateway
+    encoded_url = quote(target_url, safe="")
+    api_url = f"https://api.zenrows.com/v1/?apikey={zenrows_key}&url={encoded_url}&js_render=true"
 
     try:
-        response = requests.get("https://api.zenrows.com/v1/", params=params, timeout=TIMEOUT)
+        response = requests.get(api_url, timeout=TIMEOUT)
         response.raise_for_status()
         return response.text
     except requests.exceptions.HTTPError as e:
@@ -68,7 +67,7 @@ def fetch_with_zenrows(target_url: str) -> str | None:
 
 
 def analyze_with_gemini(text_content: str, url: str) -> JobListing | None:
-    """Usa Gemini per validare se si tratta di una vera offerta ed estrarne i dati."""
+    """Usa gemini-2.5-flash per analizzare l'annuncio."""
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
         print("GEMINI_API_KEY non trovata.", file=sys.stderr)
@@ -111,7 +110,7 @@ def analyze_with_gemini(text_content: str, url: str) -> JobListing | None:
     """
 
     try:
-        # Usiamo gemini-2.5-flash per massima compatibilità con la v1 dell'SDK google-genai
+        # Aggiornato a gemini-2.5-flash come richiesto dall'API
         response = client.models.generate_content(
             model="gemini-2.5-flash",
             contents=prompt,
