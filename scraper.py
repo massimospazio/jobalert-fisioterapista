@@ -8,6 +8,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from pathlib import Path
 from urllib.parse import urlparse
+from zenrows import ZenRowsClient
 
 import requests
 from bs4 import BeautifulSoup
@@ -42,22 +43,18 @@ class JobListing:
 
 
 def fetch_with_zenrows(target_url: str) -> str | None:
-    """Scarica il contenuto HTML della pagina tramite l'API di ZenRows."""
+    """Scarica il contenuto HTML della pagina usando il client ufficiale ZenRows."""
     zenrows_key = os.environ.get("ZENROWS_KEY", "").strip()
     if not zenrows_key:
         print("ZENROWS_KEY non trovata nei Secret di GitHub!", file=sys.stderr)
         return None
 
-    params = {
-        "apikey": zenrows_key,
-        "url": target_url,
-        "js_render": "true"
-    }
-
     try:
-        resp = requests.get("https://api.zenrows.com/v1/", params=params, timeout=TIMEOUT)
-        resp.raise_for_status()
-        return resp.text
+        client = ZenRowsClient(zenrows_key)
+        params = {"js_render": "true"}
+        response = client.get(target_url, params=params)
+        response.raise_for_status()
+        return response.text
     except Exception as e:
         print(f"Errore download ZenRows per {target_url}: {e}", file=sys.stderr)
         return None
