@@ -1,6 +1,7 @@
 import unittest
 
 from core.config import load_all
+from core.dedup import deduplicate_jobs, opportunity_key
 from core.filters import evaluate_filters
 from core.models import JobListing
 from core.scoring import haversine_km, score_job
@@ -22,6 +23,17 @@ class CoreTests(unittest.TestCase):
         result = evaluate_filters(job, self.config["filters"])
         self.assertTrue(result.included)
         self.assertIn("fisioterapista", result.positive_matches)
+
+    def test_plural_physiotherapist_title_is_included(self):
+        job = JobListing(
+            source="test",
+            url="https://example.test/plural",
+            title="Cercasi Fisioterapisti",
+            text="Studio sanitario ricerca professionisti per la propria sede",
+        )
+        result = evaluate_filters(job, self.config["filters"])
+        self.assertTrue(result.included)
+        self.assertIn("fisioterapisti", result.positive_matches)
 
     def test_service_offer_is_excluded(self):
         job = JobListing(
@@ -58,6 +70,48 @@ class CoreTests(unittest.TestCase):
         )
         result = evaluate_filters(job, self.config["filters"])
         self.assertTrue(result.included)
+
+    def test_reposts_same_company_location_are_deduplicated(self):
+        first = JobListing(
+            source="Bakeca",
+            url="https://example.test/repost-1",
+            title="Fisioterapista - Latina (LT)",
+            text="S.M.E.C. ricerca fisioterapista",
+            company="S.M.E.C. SRLS",
+            location="Latina",
+            province="LT",
+            published_at="2026-09-01",
+        )
+        second = JobListing(
+            source="Bakeca",
+            url="https://example.test/repost-2",
+            title="Fisioterapista - Latina (LT)",
+            text="S.M.E.C. ricerca fisioterapista a tempo indeterminato",
+            company="S.M.E.C. SRLS",
+            location="Latina",
+            province="LT",
+            published_at="2026-09-02",
+            contract_type="tempo_indeterminato",
+        )
+        self.assertEqual(opportunity_key(first), opportunity_key(second))
+        unique, removed = deduplicate_jobs([first, second])
+        self.assertEqual(len(unique), 1)
+        self.assertEqual(removed, 1)
+        self.assertEqual(unique[0].contract_type, "tempo_indeterminato")
+
+    def test_same_company_different_locations_are_distinct(self):
+        latina = JobListing(
+            source="Bakeca", url="https://example.test/latina", title="Fisioterapista",
+            text="", company="S.M.E.C. SRLS", location="Latina", province="LT",
+        )
+        anzio = JobListing(
+            source="Bakeca", url="https://example.test/anzio", title="Fisioterapista",
+            text="", company="S.M.E.C. SRLS", location="Anzio", province="RM",
+        )
+        self.assertNotEqual(opportunity_key(latina), opportunity_key(anzio))
+        unique, removed = deduplicate_jobs([latina, anzio])
+        self.assertEqual(len(unique), 2)
+        self.assertEqual(removed, 0)
 
     def test_indefinite_contract_scores_better_than_piva(self):
         common = dict(
