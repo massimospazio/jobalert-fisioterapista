@@ -6,6 +6,7 @@ from pathlib import Path
 from core.config import load_all
 from core.dedup import deduplicate_jobs, opportunity_key
 from core.filters import evaluate_filters
+from core.normalizer import enrich_job
 from core.scoring import score_job
 from core.state import load_state, merge_state, save_state_dict, stable_job_id
 from reports.audit import format_console_audit, write_audit
@@ -68,6 +69,7 @@ def main() -> None:
         print(f"\nRACCOLTA FONTE: {source.get('name', source_id)}")
         try:
             jobs = _collect_source(source, locations)
+            jobs = [enrich_job(job, locations) for job in jobs]
             print(f"Annunci raccolti: {len(jobs)}")
             all_jobs.extend(jobs)
         except Exception as exc:
