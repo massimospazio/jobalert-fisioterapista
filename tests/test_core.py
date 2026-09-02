@@ -4,6 +4,7 @@ from core.config import load_all
 from core.filters import evaluate_filters
 from core.models import JobListing
 from core.scoring import haversine_km, score_job
+from core.state import build_state, split_new_jobs
 
 
 class CoreTests(unittest.TestCase):
@@ -88,6 +89,18 @@ class CoreTests(unittest.TestCase):
         km = haversine_km(41.7318, 12.6583, 41.8067, 12.6813)
         self.assertGreater(km, 5)
         self.assertLess(km, 10)
+
+    def test_state_detects_only_new_urls(self):
+        baseline = [
+            {"source": "test", "url": "https://example.test/known", "title": "Fisioterapista"},
+        ]
+        current = [
+            {"source": "test", "url": "https://example.test/known", "title": "Fisioterapista"},
+            {"source": "test", "url": "https://example.test/new", "title": "Fisioterapista"},
+        ]
+        new_items, existing_items = split_new_jobs(current, build_state(baseline))
+        self.assertEqual([item["url"] for item in new_items], ["https://example.test/new"])
+        self.assertEqual([item["url"] for item in existing_items], ["https://example.test/known"])
 
 
 if __name__ == "__main__":
