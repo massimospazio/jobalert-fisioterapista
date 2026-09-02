@@ -9,6 +9,7 @@ from core.models import JobListing
 
 
 ZENROWS_ENDPOINT = "https://api.zenrows.com/v1/"
+LAZIO_PROVINCES = {"RM", "LT", "FR", "VT", "RI"}
 LAZIO_PLACES = [
     ("Albano Laziale", "RM"), ("Aprilia", "LT"), ("Anzio", "RM"), ("Ariccia", "RM"),
     ("Civitavecchia", "RM"), ("Colleferro", "RM"), ("Fiano Romano", "RM"), ("Fiumicino", "RM"),
@@ -46,6 +47,16 @@ def _title(card, raw: str) -> str:
 def _company(raw: str) -> str:
     match = re.search(r"\bAzienda:\s*(.+?)\s+\d{1,2}/\d{1,2}/\d{4}\b", raw, re.IGNORECASE)
     return _clean(match.group(1)) if match else ""
+
+
+def _explicit_province(title: str):
+    match = re.search(r"\(([A-Z]{2})\)", title)
+    return match.group(1) if match else None
+
+
+def _is_lazio(title: str) -> bool:
+    province = _explicit_province(title)
+    return province is None or province in LAZIO_PROVINCES
 
 
 def _location(title: str, raw: str):
@@ -105,14 +116,25 @@ def _homecare(text: str) -> bool:
     return any(token in lowered for token in ["adi", "domiciliar", "a domicilio", "assistenza domiciliare"])
 
 
-def _homecare_only(text: str) -> bool:
+def _homecare_only(title: str, text: str) -> bool:
+    title_lower = title.lower()
     lowered = text.lower()
-    if not _homecare(text):
+    if not _homecare(f"{title} {text}"):
         return False
-    mixed = ["ambulator", "poliambulator", "struttura", "residenzial", "ospedal", "clinica", "studio", "rsa", "reparto"]
+
+    mixed = ["ambulator", "poliambulator", "residenzial", "ospedal", "clinica", "studio", "rsa", "reparto"]
     if any(token in lowered for token in mixed):
         return False
-    exclusive = ["fisioterapista domiciliare", "assistenza domiciliare", "servizio adi", "per adi", "adi asl", "prestazioni domiciliari"]
+
+    # A title explicitly marked ADI/domiciliare is treated as homecare-only unless
+    # the card also states an ambulatory/residential setting.
+    if "adi" in title_lower or "domiciliar" in title_lower:
+        return True
+
+    exclusive = [
+        "assistenza domiciliare", "servizio adi", "per adi", "adi asl",
+        "prestazioni domiciliari", "pazienti a domicilio",
+    ]
     return any(token in lowered for token in exclusive)
 
 
@@ -161,6 +183,10 @@ def collect(source_config: dict, locations: dict) -> list[JobListing]:
         title = _title(card, raw)
         if "fisioterap" not in f"{title} {raw}".lower():
             continue
+        if not _is_lazio(title):
+            print(f"BAKECA_EXCLUDED_OUTSIDE_LAZIO title={title!r}")
+            continue
+
         company = _company(raw)
         location, province = _location(title, raw)
         coords = locations.get(location.lower(), {}) if location else {}
@@ -182,9 +208,9 @@ def collect(source_config: dict, locations: dict) -> list[JobListing]:
             contract_type=contract,
             employment_type=_employment(raw),
             piva_required=contract == "partita_iva",
-            adi="adi" in raw.lower(),
+            adi="adi" in f"{title} {raw}".lower(),
             homecare=homecare,
-            homecare_only=_homecare_only(f"{title} {raw}"),
+            homecare_only=_homecare_only(title, raw),
             cooperative="cooperativa" in f"{company} {raw}".lower(),
             salary=salary,
             salary_present=bool(salary),
