@@ -25,13 +25,29 @@ def write_audit(job: JobListing, filter_result: FilterResult, score_result: Scor
     return filename
 
 
+def _yes_no(value: bool) -> str:
+    return "SI" if value else "NO"
+
+
 def format_console_audit(job: JobListing, filter_result: FilterResult, score_result: ScoreResult | None) -> str:
+    locality = job.location or "non indicata"
+    if job.province:
+        locality = f"{locality} ({job.province})"
+
     lines = [
         "=" * 72,
         f"FONTE: {job.source}",
         f"TITOLO: {job.title}",
+        f"AZIENDA: {job.company or 'non indicata'}",
         f"URL: {job.url}",
-        f"LOCALITA: {job.location or 'non indicata'}",
+        f"LOCALITA: {locality}",
+        f"PUBBLICATO: {job.published_at or 'non indicato'}",
+        f"SCADENZA CANDIDATURA: {job.application_deadline or 'non indicata'}",
+        f"CONTRATTO: {job.contract_type or 'non specificato'}",
+        f"DOMICILIARE/ADI: {_yes_no(job.homecare or job.adi)}",
+        f"SOLO DOMICILIARE/ADI: {_yes_no(job.homecare_only)}",
+        f"COOPERATIVA: {_yes_no(job.cooperative)}",
+        f"RETRIBUZIONE: {job.salary or 'non indicata'}",
         "-" * 72,
         f"FILTRO: {'INCLUSO' if filter_result.included else 'ESCLUSO'}",
         f"MOTIVO: {filter_result.reason}",
