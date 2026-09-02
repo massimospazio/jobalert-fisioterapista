@@ -77,16 +77,20 @@ def _location(text: str):
     return "", ""
 
 
+def _has_adi(text: str) -> bool:
+    return bool(re.search(r"\badi\b", (text or "").lower()))
+
+
 def _homecare(text: str) -> bool:
     lowered = text.lower()
-    return any(token in lowered for token in ["adi", "domiciliar", "a domicilio", "assistenza domiciliare"])
+    return _has_adi(lowered) or any(token in lowered for token in ["domiciliar", "a domicilio", "assistenza domiciliare"])
 
 
 def _homecare_only(text: str) -> bool:
     lowered = text.lower()
     if not _homecare(text):
         return False
-    mixed = ["ambulator", "poliambulator", "struttura", "residenzial", "ospedal", "clinica", "studio", "rsa", "reparto"]
+    mixed = ["ambulator", "poliambulator", "residenzial", "ospedal", "clinica", "studio", "rsa", "reparto"]
     if any(token in lowered for token in mixed):
         return False
     exclusive = ["fisioterapista domiciliare", "assistenza domiciliare", "servizio adi", "per adi", "adi asl", "prestazioni domiciliari"]
@@ -154,7 +158,7 @@ def collect(source_config: dict, locations: dict) -> list[JobListing]:
             application_deadline=_deadline(detail_text),
             contract_type=contract,
             piva_required=contract == "partita_iva",
-            adi="adi" in detail_text.lower(),
+            adi=_has_adi(detail_text),
             homecare=homecare,
             homecare_only=_homecare_only(detail_text),
             cooperative="cooperativa" in detail_text.lower(),
