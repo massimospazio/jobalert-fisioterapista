@@ -10,13 +10,19 @@ class JobListing:
     text: str
     company: str = ""
     location: str = ""
+    province: str = ""
     latitude: Optional[float] = None
     longitude: Optional[float] = None
+    published_at: Optional[str] = None
+    application_deadline: Optional[str] = None
     contract_type: str = "non_specificato"
     employment_type: str = "non_specificato"
     piva_required: bool = False
     adi: bool = False
+    homecare: bool = False
     homecare_only: bool = False
+    cooperative: bool = False
+    salary: str = ""
     salary_present: bool = False
 
 
