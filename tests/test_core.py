@@ -43,6 +43,17 @@ class CoreTests(unittest.TestCase):
         result = evaluate_filters(job, self.config["filters"])
         self.assertTrue(result.included)
 
+    def test_non_rome_province_is_excluded(self):
+        job = JobListing(source="test", url="https://example.test/latina", title="Fisioterapista", text="Offerta di lavoro", location="Latina", province="LT")
+        result = evaluate_filters(job, self.config["filters"])
+        self.assertFalse(result.included)
+        self.assertIn("province_not_allowed", result.exclusion_rules)
+
+    def test_rome_province_is_included(self):
+        job = JobListing(source="test", url="https://example.test/anzio", title="Fisioterapista", text="Offerta di lavoro", location="Anzio", province="RM")
+        result = evaluate_filters(job, self.config["filters"])
+        self.assertTrue(result.included)
+
     def test_reposts_same_company_location_are_deduplicated(self):
         first = JobListing(source="Bakeca", url="https://example.test/repost-1", title="Fisioterapista - Latina (LT)", text="S.M.E.C. ricerca fisioterapista", company="S.M.E.C. SRLS", location="Latina", province="LT", published_at="2026-09-01")
         second = JobListing(source="Bakeca", url="https://example.test/repost-2", title="Fisioterapista - Latina (LT)", text="S.M.E.C. ricerca fisioterapista a tempo indeterminato", company="S.M.E.C. SRLS", location="Latina", province="LT", published_at="2026-09-02", contract_type="tempo_indeterminato")
