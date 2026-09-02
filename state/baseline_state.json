@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "jobs": {
     "c5aabd0a6c03c8807608eb06": {"source": "linkedin", "url": "https://it.linkedin.com/jobs/view/fisioterapista-at-istitutoauxologico-4413165637"},
     "c243ed6c06247d271b86fba3": {"source": "linkedin", "url": "https://it.linkedin.com/jobs/view/fisioterapista-at-centro-di-riabilitazione-villaggio-eugenio-litta-3762487118"},
@@ -21,5 +21,27 @@
     "565aa2ff9bbb974948bec557": {"source": "ofi_lazio", "url": "https://www.ofilazio.it/wp-content/uploads/2026/06/RICERCA-PERSONALE.pdf"},
     "9cd9d51cc3611e39deadc121": {"source": "ofi_lazio", "url": "https://www.ofilazio.it/wp-content/uploads/2026/06/offerta-lavoro-signed.pdf"},
     "1be046c1ab6cdf25ebcc19b8": {"source": "ofi_lazio", "url": "https://www.ofilazio.it/wp-content/uploads/2026/05/Medical-Service-Assistance-Srl-Societa-Benefit.pdf"}
+  },
+  "opportunities": {
+    "cee1af3bc85628663783ded7": {},
+    "0671fa9d7389300edc6c4f8d": {},
+    "5f8026dc634d26f4a760ec3b": {},
+    "0873a5c91a608cde70ccfb9e": {},
+    "361f7b38e7dd925d52f1acea": {},
+    "fbab4bfeaf047833c7da2374": {},
+    "fa8b822ea760daef7b35fc76": {},
+    "816c8544e3fa92bdc2f5ce71": {},
+    "2b04ad30d5bc99218f74cd9e": {},
+    "68568254da67c26da5726745": {},
+    "70beb1a7cf1b1313cd7b7ebb": {},
+    "77875c457d72eb4d20f984bc": {},
+    "3efdb49d58e05f114fd40a1e": {},
+    "19792959299e439a08a89f7d": {},
+    "5266a706af436df0af722e11": {},
+    "e1134bf4e25a83c0306964f1": {},
+    "027d05c03d612735083159ae": {},
+    "93c4f76f2849f7c8b9ebb4d3": {},
+    "b6c259d965a9070410f15790": {},
+    "57a23c7fecf97e6874dd915a": {}
   }
 }
