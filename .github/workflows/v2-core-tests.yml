@@ -19,7 +19,7 @@ jobs:
           python-version: "3.11"
 
       - name: Install v2 dependencies
-        run: pip install "PyYAML>=6.0" requests beautifulsoup4 lxml playwright
+        run: pip install "PyYAML>=6.0" requests beautifulsoup4 lxml playwright pypdf
 
       - name: Install Chromium
         run: python -m playwright install chromium --with-deps
@@ -61,6 +61,10 @@ jobs:
       - name: Merge OFI Lazio offers
         if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[baseline]') }}
         run: python tools/baseline_ofi_merge.py
+
+      - name: Enrich LinkedIn and OFI details for free
+        if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[baseline]') }}
+        run: python tools/baseline_enrich_free.py
 
       - name: Finalize baseline and initialize state
         if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[baseline]') }}
