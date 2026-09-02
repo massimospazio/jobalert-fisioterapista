@@ -36,6 +36,17 @@ jobs:
           ZENROWS_KEY: ${{ secrets.ZENROWS_KEY }}
         run: python main_v2.py
 
+      - name: Send new-job email
+        if: success()
+        env:
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          ALERT_EMAIL_FROM: ${{ secrets.ALERT_EMAIL_FROM }}
+          ALERT_EMAIL_TO: ${{ secrets.ALERT_EMAIL_TO }}
+        run: python tools/notify_email.py
+
       - name: Upload audit and new jobs
         if: always()
         uses: actions/upload-artifact@v4
