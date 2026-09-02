@@ -58,6 +58,10 @@ jobs:
           ZENROWS_KEY: ${{ secrets.ZENROWS_KEY }}
         run: python tools/baseline_extract.py
 
+      - name: Finalize baseline and initialize state
+        if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[baseline]') }}
+        run: python tools/baseline_finalize.py
+
       - name: Upload baseline jobs
         if: ${{ always() && (github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[baseline]')) }}
         uses: actions/upload-artifact@v4
