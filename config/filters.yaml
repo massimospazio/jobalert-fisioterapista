@@ -26,14 +26,6 @@ exclusion_rules:
       - offre trattamenti
       - offro servizio di fisioterapia
       - offre servizio di fisioterapia
-  homecare_only:
-    description: Offerta esclusivamente domiciliare o ADI
-    patterns:
-      - assistenza domiciliare integrata
-      - esclusivamente domiciliare
-      - attività domiciliare
-      - servizio adi
-      - per adi
-      - adi asl
 
+exclude_homecare_only: true
 require_positive_match: true
