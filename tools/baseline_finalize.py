@@ -51,6 +51,37 @@ def detect_homecare_only(text: str) -> bool:
     return any(marker in lowered for marker in exclusive_markers)
 
 
+def extract_bakeca_company(raw: str):
+    match = re.search(r"\bAzienda:\s*(.+?)\s+\d{1,2}/\d{1,2}/\d{4}\b", raw or "", re.IGNORECASE)
+    return clean(match.group(1)) if match else None
+
+
+def fix_location(item: dict):
+    title = clean(item.get("title")) or ""
+    raw = clean(item.get("raw_text")) or ""
+    location = clean(item.get("location"))
+    province = clean(item.get("province"))
+
+    if item.get("source") == "bakeca":
+        match = re.search(r"-\s*([^()]+?)\s*\(([A-Z]{2})\)\s*$", title)
+        if match:
+            return clean(match.group(1)), match.group(2)
+
+        known = [
+            ("Albano Laziale", "RM"), ("Aprilia", "LT"), ("Anzio", "RM"), ("Ariccia", "RM"),
+            ("Civitavecchia", "RM"), ("Colleferro", "RM"), ("Fiano Romano", "RM"), ("Fiumicino", "RM"),
+            ("Fondi", "LT"), ("Formia", "LT"), ("Frascati", "RM"), ("Gaeta", "LT"), ("Genzano", "RM"),
+            ("Grottaferrata", "RM"), ("Latina", "LT"), ("Marino", "RM"), ("Nettuno", "RM"),
+            ("Pomezia", "RM"), ("Roma", "RM"), ("Velletri", "RM"), ("Viterbo", "VT"), ("Cori", "LT"),
+        ]
+        blob = f"{title} {raw}".lower()
+        for place, code in known:
+            if place.lower() in blob:
+                return place, code
+
+    return location, province
+
+
 def read_rows() -> list[dict]:
     with INPUT_CSV.open("r", encoding="utf-8", newline="") as handle:
         rows = list(csv.DictReader(handle))
@@ -59,12 +90,21 @@ def read_rows() -> list[dict]:
     for item in rows:
         raw = clean(item.get("raw_text")) or ""
         title = clean(item.get("title")) or ""
-        company = clean(item.get("company")) or ""
-        combined = " ".join([title, company, raw])
+        company = clean(item.get("company"))
+
+        if item.get("source") == "bakeca" and not company:
+            company = extract_bakeca_company(raw)
+            item["company"] = company
+
+        location, province = fix_location(item)
+        item["location"] = location
+        item["province"] = province
+
+        combined = " ".join([title, company or "", raw])
         item["homecare"] = as_bool(item.get("homecare"))
         item["homecare_only"] = detect_homecare_only(combined)
         item["cooperative"] = as_bool(item.get("cooperative"))
-        for key in ["location", "province", "published_at", "application_deadline", "contract_type", "salary"]:
+        for key in ["published_at", "application_deadline", "contract_type", "salary"]:
             item[key] = clean(item.get(key))
         enriched.append(item)
     return enriched
