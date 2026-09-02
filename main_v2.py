@@ -50,6 +50,26 @@ def _write_new_jobs(items: list[dict], path: str = NEW_JOBS_PATH) -> Path:
     return target
 
 
+def _coverage(items) -> dict[str, tuple[int, int]]:
+    total = len(items)
+    checks = {
+        "location": lambda job: bool(job.location),
+        "province": lambda job: bool(job.province),
+        "published_at": lambda job: bool(job.published_at),
+        "contract": lambda job: bool(job.contract_type and job.contract_type != "non_specificato"),
+        "salary": lambda job: bool(job.salary),
+        "deadline": lambda job: bool(job.application_deadline),
+    }
+    return {name: (sum(1 for job in items if check(job)), total) for name, check in checks.items()}
+
+
+def _print_coverage(items) -> None:
+    print("FIELD_COVERAGE")
+    for name, (present, total) in _coverage(items).items():
+        pct = (present / total * 100) if total else 0.0
+        print(f"  {name:<12} {present}/{total} ({pct:.0f}%)")
+
+
 def main() -> None:
     config = load_all()
     settings = config["settings"]
@@ -80,6 +100,7 @@ def main() -> None:
         f"\nDEDUP raw={len(all_jobs)} unique_opportunities={len(unique_jobs)} "
         f"duplicates_removed={duplicate_count}"
     )
+    _print_coverage(unique_jobs)
 
     included = 0
     excluded = 0
