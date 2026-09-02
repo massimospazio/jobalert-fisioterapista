@@ -33,6 +33,31 @@ class CoreTests(unittest.TestCase):
         self.assertFalse(result.included)
         self.assertIn("service_offer", result.exclusion_rules)
 
+    def test_homecare_only_is_excluded(self):
+        job = JobListing(
+            source="test",
+            url="https://example.test/homecare",
+            title="Fisioterapista ADI",
+            text="Ricerca fisioterapista per sola assistenza domiciliare integrata",
+            adi=True,
+            homecare_only=True,
+        )
+        result = evaluate_filters(job, self.config["filters"])
+        self.assertFalse(result.included)
+        self.assertIn("homecare_only", result.exclusion_rules)
+
+    def test_mixed_ambulatory_homecare_is_included(self):
+        job = JobListing(
+            source="test",
+            url="https://example.test/mixed",
+            title="Fisioterapista",
+            text="Ricerca fisioterapista per ambulatorio e interventi domiciliari",
+            adi=True,
+            homecare_only=False,
+        )
+        result = evaluate_filters(job, self.config["filters"])
+        self.assertTrue(result.included)
+
     def test_indefinite_contract_scores_better_than_piva(self):
         common = dict(
             source="test",
