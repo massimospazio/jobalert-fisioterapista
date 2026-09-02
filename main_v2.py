@@ -2,6 +2,7 @@ import os
 from dataclasses import asdict
 
 from core.config import load_all
+from core.dedup import deduplicate_jobs, opportunity_key
 from core.filters import evaluate_filters
 from core.scoring import score_job
 from core.state import load_state, stable_job_id
@@ -38,6 +39,7 @@ def main() -> None:
     output_dir = settings.get("audit", {}).get("output_dir", "logs")
     baseline_state = load_state(STATE_PATH)
     known_ids = set(baseline_state.get("jobs", {}).keys())
+    known_opportunities = set(baseline_state.get("opportunities", {}).keys())
 
     sources = [source for source in config["sources"].get("sources", []) if source.get("enabled")]
     all_jobs = []
@@ -52,33 +54,41 @@ def main() -> None:
         except Exception as exc:
             print(f"SOURCE_ERROR {source_id}: {exc}")
 
+    unique_jobs, duplicate_count = deduplicate_jobs(all_jobs)
+    print(
+        f"\nDEDUP raw={len(all_jobs)} unique_opportunities={len(unique_jobs)} "
+        f"duplicates_removed={duplicate_count}"
+    )
+
     included = 0
     excluded = 0
     new_included = 0
     known_included = 0
     audit_file = None
 
-    for job in all_jobs:
+    for job in unique_jobs:
         filter_result = evaluate_filters(job, filters_config)
         score_result = score_job(job, scoring_config, settings) if filter_result.included else None
         included += int(filter_result.included)
         excluded += int(not filter_result.included)
 
         job_id = stable_job_id(asdict(job))
-        state_status = "KNOWN" if job_id in known_ids else "NEW"
+        opp_id = opportunity_key(job)
+        state_status = "KNOWN" if job_id in known_ids or opp_id in known_opportunities else "NEW"
         if filter_result.included:
             if state_status == "NEW":
                 new_included += 1
             else:
                 known_included += 1
 
-        print(f"STATO: {state_status} | JOB_ID: {job_id}")
+        print(f"STATO: {state_status} | JOB_ID: {job_id} | OPPORTUNITY_ID: {opp_id}")
         print(format_console_audit(job, filter_result, score_result))
         audit_file = write_audit(job, filter_result, score_result, output_dir)
 
     print("\n" + "=" * 72)
     print(
-        f"RACCOLTI: {len(all_jobs)} | INCLUSI: {included} | ESCLUSI: {excluded} | "
+        f"RACCOLTI RAW: {len(all_jobs)} | OPPORTUNITA UNICHE: {len(unique_jobs)} | "
+        f"DUPLICATI: {duplicate_count} | INCLUSI: {included} | ESCLUSI: {excluded} | "
         f"NUOVI INCLUSI: {new_included} | GIA NOTI: {known_included}"
     )
     if audit_file:
