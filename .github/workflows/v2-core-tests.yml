@@ -39,13 +39,13 @@ jobs:
           if-no-files-found: warn
 
       - name: Probe ZenRows on Bakeca
-        if: ${{ env.ZENROWS_KEY != '' }}
+        if: ${{ github.event_name == 'workflow_dispatch' && env.ZENROWS_KEY != '' }}
         env:
           ZENROWS_KEY: ${{ secrets.ZENROWS_KEY }}
         run: python tools/zenrows_probe.py
 
       - name: Upload ZenRows diagnostics
-        if: always()
+        if: ${{ always() && github.event_name == 'workflow_dispatch' }}
         uses: actions/upload-artifact@v4
         with:
           name: zenrows-bakeca-diagnostics
