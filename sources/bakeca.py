@@ -111,9 +111,13 @@ def _salary(text: str) -> str:
     return _clean(match.group(0)) if match else ""
 
 
+def _has_adi(text: str) -> bool:
+    return bool(re.search(r"\badi\b", (text or "").lower()))
+
+
 def _homecare(text: str) -> bool:
     lowered = text.lower()
-    return any(token in lowered for token in ["adi", "domiciliar", "a domicilio", "assistenza domiciliare"])
+    return _has_adi(lowered) or any(token in lowered for token in ["domiciliar", "a domicilio", "assistenza domiciliare"])
 
 
 def _homecare_only(title: str, text: str) -> bool:
@@ -126,9 +130,7 @@ def _homecare_only(title: str, text: str) -> bool:
     if any(token in lowered for token in mixed):
         return False
 
-    # A title explicitly marked ADI/domiciliare is treated as homecare-only unless
-    # the card also states an ambulatory/residential setting.
-    if "adi" in title_lower or "domiciliar" in title_lower:
+    if _has_adi(title_lower) or "domiciliar" in title_lower:
         return True
 
     exclusive = [
@@ -208,7 +210,7 @@ def collect(source_config: dict, locations: dict) -> list[JobListing]:
             contract_type=contract,
             employment_type=_employment(raw),
             piva_required=contract == "partita_iva",
-            adi="adi" in f"{title} {raw}".lower(),
+            adi=_has_adi(f"{title} {raw}"),
             homecare=homecare,
             homecare_only=_homecare_only(title, raw),
             cooperative="cooperativa" in f"{company} {raw}".lower(),
