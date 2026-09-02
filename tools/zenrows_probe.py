@@ -8,6 +8,7 @@ from bs4 import BeautifulSoup
 
 ZENROWS_ENDPOINT = "https://api.zenrows.com/v1/"
 BAKECA_URL = "https://www.bakeca.it/annunci/medicina-salute-assistenza/luogo/lazio/?keyword=fisioterapista"
+BAKECA_JOB_SELECTOR = ".annuncio-in-elenco"
 ESTIMATED_CREDITS_PER_REQUEST = 25
 
 
@@ -49,12 +50,14 @@ def main() -> None:
         "apikey": apikey,
         "js_render": "true",
         "premium_proxy": "true",
+        "wait_for": BAKECA_JOB_SELECTOR,
     }
 
     response = requests.get(ZENROWS_ENDPOINT, params=params, timeout=120)
     html = response.text or ""
     soup = BeautifulSoup(html, "lxml")
     title = soup.title.get_text(" ", strip=True) if soup.title else ""
+    job_cards = soup.select(BAKECA_JOB_SELECTOR)
     links = extract_links(html)
     probable_jobs = [
         url for url in links
@@ -70,7 +73,8 @@ def main() -> None:
     print(
         "ZENROWS_PROBE bakeca "
         f"status={response.status_code} bytes={len(response.content)} "
-        f"title={title!r} links={len(links)} probable_jobs={len(probable_jobs)} "
+        f"title={title!r} job_cards={len(job_cards)} links={len(links)} "
+        f"probable_jobs={len(probable_jobs)} "
         f"contains_fisio={'fisioterap' in html.lower()}"
     )
     log_zenrows_usage(response)
@@ -79,6 +83,11 @@ def main() -> None:
 
     if response.status_code >= 400:
         raise SystemExit(f"ZenRows ha restituito HTTP {response.status_code}")
+
+    if not job_cards or not probable_jobs:
+        raise SystemExit(
+            "ZENROWS_INCOMPLETE_RENDER: Bakeca non ha restituito le card annunci attese"
+        )
 
 
 if __name__ == "__main__":
