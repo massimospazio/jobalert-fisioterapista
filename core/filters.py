@@ -27,6 +27,9 @@ def evaluate_filters(job: JobListing, config: dict) -> FilterResult:
         if any(pattern.lower() in text for pattern in patterns):
             matched_rules.append(rule_id)
 
+    if config.get("exclude_homecare_only", False) and job.homecare_only:
+        matched_rules.append("homecare_only")
+
     require_positive = bool(config.get("require_positive_match", True))
 
     if matched_rules:
