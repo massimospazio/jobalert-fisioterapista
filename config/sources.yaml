@@ -1,16 +1,54 @@
 sources:
+  - id: indeed
+    name: Indeed
+    enabled: true
+    role: core
+    access_mode: free_first
+    search_url: "https://it.indeed.com/q-fisioterapista-l-lazio-offerte-lavoro.html"
+    max_results: 30
+
   - id: bakeca
     name: Bakeca
     enabled: true
+    role: core
+    access_mode: zenrows_fallback
     search_url: "https://www.bakeca.it/annunci/medicina-salute-assistenza/luogo/lazio/?keyword=fisioterapista"
+    max_results: 30
+
+  - id: ofi_lazio
+    name: OFI Lazio
+    enabled: true
+    role: core
+    access_mode: free_first
+    search_url: "https://www.ofilazio.it/offerte-di-lavoro/"
+    max_results: 30
+
+  - id: linkedin
+    name: LinkedIn
+    enabled: true
+    role: experimental
+    access_mode: free_only
+    search_url: "https://it.linkedin.com/jobs/fisioterapista-roma-rome-offerte-di-lavoro-roma-lz"
     max_results: 30
 
   - id: subito
     name: Subito
     enabled: false
+    role: reserve
     search_url: "https://www.subito.it/annunci-lazio/vendita/offerte-lavoro/roma/?q=fisioterapista"
 
   - id: lavoro_it
     name: Lavoro.it
     enabled: false
+    role: reserve
     search_url: "https://www.lavoro.it/"
+
+  - id: jooble
+    name: Jooble
+    enabled: false
+    role: reserve
+
+  - id: talent
+    name: Talent.com
+    enabled: false
+    role: reserve
