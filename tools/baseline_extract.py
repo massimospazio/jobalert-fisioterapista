@@ -17,6 +17,7 @@ OFI_URL = "https://www.ofilazio.it/offerte-di-lavoro/"
 LINKEDIN_URL = "https://it.linkedin.com/jobs/fisioterapista-roma-rome-offerte-di-lavoro-roma-lz?position=1&pageNum=0"
 BAKECA_URL = "https://www.bakeca.it/annunci/medicina-salute-assistenza/luogo/lazio/?keyword=fisioterapista"
 ZENROWS_ENDPOINT = "https://api.zenrows.com/v1/"
+LAZIO_PROVINCES = {"RM", "LT", "FR", "VT", "RI"}
 
 
 def clean(text: str) -> str:
@@ -51,25 +52,23 @@ def collect_ofi() -> list[dict]:
     response.raise_for_status()
     soup = BeautifulSoup(response.text, "lxml")
     results = []
-    seen = set()
 
-    for anchor in soup.find_all("a", href=True):
+    heading = soup.find(lambda tag: tag.name in {"h1", "h2", "h3", "h4"} and clean(tag.get_text(" ", strip=True)).lower() == "offerte di lavoro")
+    root = heading.parent if heading else soup
+
+    for title_node in root.find_all(["h2", "h3", "h4"]):
+        title = clean(title_node.get_text(" ", strip=True))
+        if not title or title.lower() == "offerte di lavoro":
+            continue
+        anchor = title_node.find_next("a", href=True)
+        if not anchor:
+            continue
         href = urljoin(OFI_URL, anchor["href"])
-        text = clean(anchor.get_text(" ", strip=True))
-        if not href.startswith("https://www.ofilazio.it/"):
+        if "/wp-content/uploads/" not in href:
             continue
-        if "/wp-content/uploads/" not in href and "offerte-di-lavoro" not in href:
-            continue
-        if href in seen:
-            continue
-        parent = anchor.find_parent(["article", "div", "li", "p"])
-        raw = clean(parent.get_text(" ", strip=True)) if parent else text
-        blob = f"{text} {raw} {href}".lower()
-        if "fisioterap" not in blob and "/wp-content/uploads/" not in href:
-            continue
-        title = text or "Offerta OFI Lazio"
-        results.append(row("ofi_lazio", title, "", "Lazio", href, raw))
-        seen.add(href)
+        parent = title_node.find_parent(["article", "div"]) or title_node
+        raw = clean(parent.get_text(" ", strip=True))
+        results.append(row("ofi_lazio", "Fisioterapista", title, "Lazio", href, raw))
 
     print(f"BASELINE_SOURCE ofi_lazio collected={len(results)}")
     return results
@@ -87,30 +86,48 @@ def collect_linkedin() -> list[dict]:
         browser.close()
 
     soup = BeautifulSoup(html, "lxml")
-    for anchor in soup.find_all("a", href=True):
-        href = urljoin(LINKEDIN_URL, anchor["href"])
-        if "/jobs/view/" not in href:
+    for card in soup.select(".base-search-card"):
+        title_node = card.select_one("h3.base-search-card__title")
+        company_node = card.select_one("h4.base-search-card__subtitle")
+        location_node = card.select_one(".job-search-card__location")
+        anchor = card.select_one('a[href*="/jobs/view/"]')
+        if not title_node or not anchor:
             continue
-        href = canonical_url(href)
+        title = clean(title_node.get_text(" ", strip=True))
+        if "fisioterap" not in title.lower():
+            continue
+        href = canonical_url(urljoin(LINKEDIN_URL, anchor["href"]))
         if href in seen:
             continue
-        title = clean(anchor.get_text(" ", strip=True))
-        card = anchor.find_parent("div") or anchor.find_parent("li")
-        raw = clean(card.get_text(" ", strip=True)) if card else title
-        if "fisioterap" not in f"{title} {raw}".lower():
-            continue
-        company = ""
-        location = ""
-        if card:
-            company_node = card.select_one("h4, .base-search-card__subtitle")
-            location_node = card.select_one(".job-search-card__location")
-            company = clean(company_node.get_text(" ", strip=True)) if company_node else ""
-            location = clean(location_node.get_text(" ", strip=True)) if location_node else ""
+        company = clean(company_node.get_text(" ", strip=True)) if company_node else ""
+        location = clean(location_node.get_text(" ", strip=True)) if location_node else ""
+        raw = clean(card.get_text(" ", strip=True))
         results.append(row("linkedin", title, company, location, href, raw))
         seen.add(href)
 
     print(f"BASELINE_SOURCE linkedin collected={len(results)}")
     return results
+
+
+def _bakeca_title(card, raw: str) -> str:
+    node = card.select_one("h2, h3, .title, .titolo")
+    if node:
+        title = clean(node.get_text(" ", strip=True))
+        if "fisioterap" in title.lower():
+            return title
+    text = re.sub(r"^\d+\s+", "", raw)
+    parts = re.split(
+        r"\s+(?:Libero professionista \(o Partita IVA\)|Tempo indeterminato|Tempo determinato|Da definire)\b",
+        text,
+        maxsplit=1,
+        flags=re.IGNORECASE,
+    )
+    return clean(parts[0])
+
+
+def _is_lazio_bakeca(title: str) -> bool:
+    province = re.search(r"\(([A-Z]{2})\)", title)
+    return not province or province.group(1) in LAZIO_PROVINCES
 
 
 def collect_bakeca() -> list[dict]:
@@ -154,8 +171,10 @@ def collect_bakeca() -> list[dict]:
         if href in seen:
             continue
         raw = clean(card.get_text(" ", strip=True))
-        title = clean(anchor.get_text(" ", strip=True))
+        title = _bakeca_title(card, raw)
         if "fisioterap" not in f"{title} {raw}".lower():
+            continue
+        if not _is_lazio_bakeca(title):
             continue
         results.append(row("bakeca", title, "", "Lazio", href, raw))
         seen.add(href)
