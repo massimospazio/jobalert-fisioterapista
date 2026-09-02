@@ -1,3 +1,4 @@
+import math
 import re
 from urllib.parse import urljoin, urlsplit, urlunsplit
 
@@ -14,6 +15,9 @@ LAZIO_PLACES = [
     ("Grottaferrata", "RM"), ("Latina", "LT"), ("Marino", "RM"), ("Nettuno", "RM"),
     ("Pomezia", "RM"), ("Roma", "RM"), ("Velletri", "RM"), ("Viterbo", "VT"), ("Cori", "LT"),
 ]
+
+ALBANO_LAT = 41.72748
+ALBANO_LON = 12.65900
 
 
 def _clean(text: str) -> str:
@@ -93,6 +97,33 @@ def _homecare_only(title: str, text: str) -> bool:
     return any(token in lowered for token in exclusive)
 
 
+def _distance_km(location: str, locations: dict) -> float:
+    coords = locations.get((location or "").lower(), {})
+    lat = coords.get("latitude")
+    lon = coords.get("longitude")
+    if lat is None or lon is None:
+        return 9999.0
+    radius = 6371.0
+    phi1 = math.radians(ALBANO_LAT)
+    phi2 = math.radians(float(lat))
+    dphi = math.radians(float(lat) - ALBANO_LAT)
+    dlambda = math.radians(float(lon) - ALBANO_LON)
+    a = math.sin(dphi / 2) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(dlambda / 2) ** 2
+    return radius * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
+
+def _candidate_priority(candidate: tuple, locations: dict) -> tuple:
+    title, _company, location, province, published, _url = candidate
+    province_priority = 0 if province == "RM" else 1
+    homecare_priority = 1 if _homecare_only(title, title) else 0
+    distance = _distance_km(location, locations)
+    try:
+        recent_priority = -int((published or "0000-00-00")[:10].replace("-", ""))
+    except ValueError:
+        recent_priority = 0
+    return province_priority, homecare_priority, distance, recent_priority
+
+
 def _description_text(html: str) -> str:
     soup = BeautifulSoup(html, "lxml")
     selectors = [
@@ -148,10 +179,17 @@ def collect(source_config: dict, locations: dict) -> list[JobListing]:
             if len(candidates) >= limit:
                 break
 
+        candidates.sort(key=lambda item: _candidate_priority(item, locations))
         print(
             f"LINKEDIN_COLLECT status={response.status if response else 'n/a'} "
             f"cards={len(cards)} candidates={len(candidates)} skipped_outside_rm={skipped_outside_rm}"
         )
+        for rank, candidate in enumerate(candidates[:5], 1):
+            title, _company, location, province, _published, _url = candidate
+            print(
+                f"LINKEDIN_PRIORITY rank={rank} province={province or 'unknown'} "
+                f"location={location!r} distance_km={_distance_km(location, locations):.1f} title={title!r}"
+            )
 
         detail_blocked = False
         for title, company, location, province, published, url in candidates:
