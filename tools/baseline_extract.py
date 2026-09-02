@@ -117,7 +117,7 @@ def _bakeca_title(card, raw: str) -> str:
             return title
     text = re.sub(r"^\d+\s+", "", raw)
     parts = re.split(
-        r"\s+(?:Libero professionista \(o Partita IVA\)|Tempo indeterminato|Tempo determinato|Da definire)\b",
+        r"\s+(?:Libero professionista \(o Partita IVA\)|Tempo indeterminato|Tempo determinato|Da definire)\s*\.",
         text,
         maxsplit=1,
         flags=re.IGNORECASE,
