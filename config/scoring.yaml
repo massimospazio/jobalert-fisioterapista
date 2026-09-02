@@ -4,6 +4,7 @@ contract:
   tempo_indeterminato: 25
   tempo_determinato: 15
   collaborazione: 5
+  cococo: 5
   partita_iva: -12
   non_specificato: 0
 
