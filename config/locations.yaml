@@ -1,7 +1,19 @@
 locations:
-  albano laziale: {latitude: 41.7318, longitude: 12.6583}
-  roma: {latitude: 41.9028, longitude: 12.4964}
-  frascati: {latitude: 41.8067, longitude: 12.6813}
-  grottaferrata: {latitude: 41.7896, longitude: 12.6674}
-  velletri: {latitude: 41.6867, longitude: 12.7778}
-  colleferro: {latitude: 41.7288, longitude: 13.0048}
+  albano laziale: {latitude: 41.72748, longitude: 12.65900}
+  roma: {latitude: 41.89193, longitude: 12.51133}
+  frascati: {latitude: 41.80910, longitude: 12.67942}
+  grottaferrata: {latitude: 41.78664, longitude: 12.67144}
+  velletri: {latitude: 41.68670, longitude: 12.77780}
+  colleferro: {latitude: 41.72722, longitude: 13.00481}
+  anzio: {latitude: 41.45263, longitude: 12.62157}
+  aprilia: {latitude: 41.59452, longitude: 12.65419}
+  civitavecchia: {latitude: 42.09325, longitude: 11.79674}
+  fiano romano: {latitude: 42.15538, longitude: 12.59467}
+  fiumicino: {latitude: 41.77093, longitude: 12.23662}
+  fondi: {latitude: 41.35787, longitude: 13.42718}
+  formia: {latitude: 41.25632, longitude: 13.60888}
+  latina: {latitude: 41.46614, longitude: 12.90430}
+  marino: {latitude: 41.76984, longitude: 12.65917}
+  nettuno: {latitude: 41.45794, longitude: 12.66393}
+  pomezia: {latitude: 41.66931, longitude: 12.50124}
+  viterbo: {latitude: 42.41937, longitude: 12.10560}
