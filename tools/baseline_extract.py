@@ -2,6 +2,7 @@ import csv
 import json
 import os
 import re
+from datetime import datetime
 from pathlib import Path
 from urllib.parse import urljoin, urlsplit, urlunsplit
 
@@ -18,6 +19,13 @@ LINKEDIN_URL = "https://it.linkedin.com/jobs/fisioterapista-roma-rome-offerte-di
 BAKECA_URL = "https://www.bakeca.it/annunci/medicina-salute-assistenza/luogo/lazio/?keyword=fisioterapista"
 ZENROWS_ENDPOINT = "https://api.zenrows.com/v1/"
 LAZIO_PROVINCES = {"RM", "LT", "FR", "VT", "RI"}
+PROVINCE_NAMES = {
+    "RM": "Roma",
+    "LT": "Latina",
+    "FR": "Frosinone",
+    "VT": "Viterbo",
+    "RI": "Rieti",
+}
 
 
 def clean(text: str) -> str:
@@ -35,15 +43,120 @@ def norm_key(title: str, company: str, location: str) -> str:
     return clean(raw)
 
 
-def row(source: str, title: str, company: str, location: str, url: str, raw_text: str) -> dict:
+def parse_date(text: str):
+    for pattern in [r"\b(\d{1,2})/(\d{1,2})/(\d{4})\b", r"\b(\d{1,2})/(\d{1,2})\b"]:
+        m = re.search(pattern, text or "")
+        if not m:
+            continue
+        try:
+            if len(m.groups()) == 3:
+                day, month, year = map(int, m.groups())
+            else:
+                day, month = map(int, m.groups())
+                year = datetime.now().year
+            return datetime(year, month, day).date().isoformat()
+        except ValueError:
+            pass
+    return None
+
+
+def extract_deadline(text: str):
+    patterns = [
+        r"(?:scadenza|entro il|candidature entro|termine)[^\d]{0,30}(\d{1,2}/\d{1,2}/\d{2,4})",
+        r"(?:scadenza|entro il|candidature entro|termine)[^\d]{0,30}(\d{1,2}/\d{1,2})",
+    ]
+    for pattern in patterns:
+        m = re.search(pattern, text or "", re.IGNORECASE)
+        if m:
+            return parse_date(m.group(1))
+    return None
+
+
+def extract_contract(text: str):
+    lowered = (text or "").lower()
+    if "tempo indeterminato" in lowered:
+        return "tempo_indeterminato"
+    if "tempo determinato" in lowered:
+        return "tempo_determinato"
+    if "partita iva" in lowered or "p.iva" in lowered or "libero professionista" in lowered:
+        return "partita_iva"
+    if "collaborazione" in lowered or "collaboratore" in lowered:
+        return "collaborazione"
+    if "prestazione occasionale" in lowered:
+        return "occasionale"
+    return None
+
+
+def extract_salary(text: str):
+    value = clean(text or "")
+    patterns = [
+        r"(?:€|eur\s*)(\d{3,5}(?:[\.,]\d{1,2})?)(?:\s*[-–]\s*(?:€|eur\s*)?(\d{3,5}(?:[\.,]\d{1,2})?))?",
+        r"(\d{3,5}(?:[\.,]\d{1,2})?)\s*(?:€|euro)(?:\s*[-–]\s*(\d{3,5}(?:[\.,]\d{1,2})?)\s*(?:€|euro))?",
+    ]
+    for pattern in patterns:
+        m = re.search(pattern, value, re.IGNORECASE)
+        if m:
+            return clean(m.group(0))
+    if re.search(r"\b(?:ral|retribuzione|stipendio|compenso)\b", value, re.IGNORECASE):
+        return "presente_non_strutturata"
+    return None
+
+
+def extract_location_and_province(text: str, fallback: str = ""):
+    blob = clean(text or "")
+    # Prefer explicit 'Comune (PR)' patterns, which are common on Bakeca.
+    matches = re.findall(r"\b([A-ZÀ-ÖØ-Ý][A-Za-zÀ-ÿ'’\- ]{1,40}?)\s*\(([A-Z]{2})\)", blob)
+    for locality, province in matches:
+        province = province.upper()
+        if province in LAZIO_PROVINCES:
+            return clean(locality), province
+
+    # Common Lazio places when no province code is shown.
+    known = [
+        ("Albano Laziale", "RM"), ("Aprilia", "LT"), ("Anzio", "RM"), ("Ariccia", "RM"),
+        ("Civitavecchia", "RM"), ("Colleferro", "RM"), ("Fiano Romano", "RM"), ("Fiumicino", "RM"),
+        ("Fondi", "LT"), ("Formia", "LT"), ("Frascati", "RM"), ("Gaeta", "LT"), ("Genzano", "RM"),
+        ("Grottaferrata", "RM"), ("Latina", "LT"), ("Marino", "RM"), ("Nettuno", "RM"),
+        ("Pomezia", "RM"), ("Roma", "RM"), ("Velletri", "RM"), ("Viterbo", "VT"), ("Cori", "LT"),
+    ]
+    lowered = blob.lower()
+    for locality, province in known:
+        if locality.lower() in lowered:
+            return locality, province
+    return (fallback or None), None
+
+
+def is_homecare(text: str):
+    lowered = (text or "").lower()
+    positive = ["domiciliar", "a domicilio", "adi", "assistenza domiciliare"]
+    if any(token in lowered for token in positive):
+        return True
+    return False
+
+
+def is_cooperative(text: str):
+    lowered = (text or "").lower()
+    return any(token in lowered for token in ["cooperativa", "soc. coop", "società cooperativa", "coop. sociale", "cooperativa sociale"])
+
+
+def row(source: str, title: str, company: str, location: str, province: str, url: str, raw_text: str,
+        published_at=None, application_deadline=None, contract_type=None, homecare=False,
+        cooperative=False, salary=None) -> dict:
     return {
         "source": source,
         "title": clean(title),
         "company": clean(company),
-        "location": clean(location),
+        "location": clean(location) if location else None,
+        "province": province,
+        "homecare": homecare,
+        "published_at": published_at,
+        "application_deadline": application_deadline,
+        "contract_type": contract_type,
+        "cooperative": cooperative,
+        "salary": salary,
         "url": canonical_url(url),
         "raw_text": clean(raw_text),
-        "dedup_key": norm_key(title, company, location),
+        "dedup_key": norm_key(title, company, location or ""),
     }
 
 
@@ -57,8 +170,8 @@ def collect_ofi() -> list[dict]:
     root = heading.parent if heading else soup
 
     for title_node in root.find_all(["h2", "h3", "h4"]):
-        title = clean(title_node.get_text(" ", strip=True))
-        if not title or title.lower() == "offerte di lavoro":
+        company = clean(title_node.get_text(" ", strip=True))
+        if not company or company.lower() == "offerte di lavoro":
             continue
         anchor = title_node.find_next("a", href=True)
         if not anchor:
@@ -68,7 +181,16 @@ def collect_ofi() -> list[dict]:
             continue
         parent = title_node.find_parent(["article", "div"]) or title_node
         raw = clean(parent.get_text(" ", strip=True))
-        results.append(row("ofi_lazio", "Fisioterapista", title, "Lazio", href, raw))
+        location, province = extract_location_and_province(raw)
+        results.append(row(
+            "ofi_lazio", "Fisioterapista", company, location, province, href, raw,
+            published_at=parse_date(raw),
+            application_deadline=extract_deadline(raw),
+            contract_type=extract_contract(raw),
+            homecare=is_homecare(raw),
+            cooperative=is_cooperative(f"{company} {raw}"),
+            salary=extract_salary(raw),
+        ))
 
     print(f"BASELINE_SOURCE ofi_lazio collected={len(results)}")
     return results
@@ -90,6 +212,7 @@ def collect_linkedin() -> list[dict]:
         title_node = card.select_one("h3.base-search-card__title")
         company_node = card.select_one("h4.base-search-card__subtitle")
         location_node = card.select_one(".job-search-card__location")
+        time_node = card.select_one("time")
         anchor = card.select_one('a[href*="/jobs/view/"]')
         if not title_node or not anchor:
             continue
@@ -100,9 +223,19 @@ def collect_linkedin() -> list[dict]:
         if href in seen:
             continue
         company = clean(company_node.get_text(" ", strip=True)) if company_node else ""
-        location = clean(location_node.get_text(" ", strip=True)) if location_node else ""
+        raw_location = clean(location_node.get_text(" ", strip=True)) if location_node else ""
         raw = clean(card.get_text(" ", strip=True))
-        results.append(row("linkedin", title, company, location, href, raw))
+        location, province = extract_location_and_province(raw_location or raw, raw_location)
+        published = time_node.get("datetime") if time_node and time_node.get("datetime") else parse_date(raw)
+        results.append(row(
+            "linkedin", title, company, location, province, href, raw,
+            published_at=published,
+            application_deadline=extract_deadline(raw),
+            contract_type=extract_contract(raw),
+            homecare=is_homecare(f"{title} {raw}"),
+            cooperative=is_cooperative(f"{company} {raw}"),
+            salary=extract_salary(raw),
+        ))
         seen.add(href)
 
     print(f"BASELINE_SOURCE linkedin collected={len(results)}")
@@ -117,7 +250,7 @@ def _bakeca_title(card, raw: str) -> str:
             return title
     text = re.sub(r"^\d+\s+", "", raw)
     parts = re.split(
-        r"\s+(?:Libero professionista \(o Partita IVA\)|Tempo indeterminato|Tempo determinato|Da definire)\s*\.",
+        r"\s+(?:Libero professionista \(o Partita IVA\)|Tempo indeterminato|Tempo determinato|Da definire)\b",
         text,
         maxsplit=1,
         flags=re.IGNORECASE,
@@ -176,7 +309,16 @@ def collect_bakeca() -> list[dict]:
             continue
         if not _is_lazio_bakeca(title):
             continue
-        results.append(row("bakeca", title, "", "Lazio", href, raw))
+        location, province = extract_location_and_province(f"{title} {raw}")
+        results.append(row(
+            "bakeca", title, "", location, province, href, raw,
+            published_at=parse_date(raw),
+            application_deadline=extract_deadline(raw),
+            contract_type=extract_contract(raw),
+            homecare=is_homecare(f"{title} {raw}"),
+            cooperative=is_cooperative(raw),
+            salary=extract_salary(raw),
+        ))
         seen.add(href)
 
     print(f"BASELINE_SOURCE bakeca collected={len(results)} cards={len(cards)}")
@@ -204,8 +346,13 @@ def save(rows: list[dict]) -> None:
     json_path = OUT_DIR / "baseline_jobs.json"
     csv_path = OUT_DIR / "baseline_jobs.csv"
     json_path.write_text(json.dumps(rows, ensure_ascii=False, indent=2), encoding="utf-8")
+    fieldnames = [
+        "source", "title", "company", "location", "province", "homecare",
+        "published_at", "application_deadline", "contract_type", "cooperative",
+        "salary", "url", "dedup_key", "raw_text",
+    ]
     with csv_path.open("w", encoding="utf-8", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=["source", "title", "company", "location", "url", "dedup_key", "raw_text"])
+        writer = csv.DictWriter(handle, fieldnames=fieldnames)
         writer.writeheader()
         writer.writerows(rows)
     print(f"BASELINE_TOTAL unique={len(rows)} json={json_path} csv={csv_path}")
