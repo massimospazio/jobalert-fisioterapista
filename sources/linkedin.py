@@ -71,18 +71,43 @@ def _deadline(text: str):
 
 def _homecare(text: str) -> bool:
     lowered = text.lower()
-    return any(token in lowered for token in ["adi", "domiciliar", "a domicilio", "assistenza domiciliare"])
+    return (
+        bool(re.search(r"\badi\b", lowered))
+        or "domiciliar" in lowered
+        or "a domicilio" in lowered
+        or "assistenza domiciliare" in lowered
+    )
 
 
-def _homecare_only(text: str) -> bool:
+def _homecare_only(title: str, text: str) -> bool:
+    title_lower = title.lower()
     lowered = text.lower()
-    if not _homecare(text):
+    if not _homecare(f"{title} {text}"):
         return False
-    mixed = ["ambulator", "poliambulator", "struttura", "residenzial", "ospedal", "clinica", "studio", "rsa", "reparto"]
+    mixed = ["ambulator", "poliambulator", "residenzial", "ospedal", "clinica", "studio", "rsa", "reparto"]
     if any(token in lowered for token in mixed):
         return False
-    exclusive = ["fisioterapista domiciliare", "assistenza domiciliare", "servizio adi", "per adi", "adi asl", "prestazioni domiciliari"]
+    if "domiciliar" in title_lower or re.search(r"\badi\b", title_lower):
+        return True
+    exclusive = ["assistenza domiciliare", "servizio adi", "prestazioni domiciliari", "pazienti a domicilio"]
     return any(token in lowered for token in exclusive)
+
+
+def _description_text(html: str) -> str:
+    soup = BeautifulSoup(html, "lxml")
+    selectors = [
+        ".show-more-less-html__markup",
+        ".description__text",
+        ".show-more-less-html",
+        "section.show-more-less-html",
+    ]
+    for selector in selectors:
+        node = soup.select_one(selector)
+        if node:
+            text = _clean(node.get_text(" ", strip=True))
+            if text:
+                return text
+    return ""
 
 
 def collect(source_config: dict, locations: dict) -> list[JobListing]:
@@ -124,18 +149,24 @@ def collect(source_config: dict, locations: dict) -> list[JobListing]:
             f"cards={len(cards)} candidates={len(candidates)}"
         )
 
+        detail_blocked = False
         for title, company, location, province, published, url in candidates:
-            detail_text = title
-            try:
-                detail_response = page.goto(url, wait_until="domcontentloaded", timeout=35000)
-                page.wait_for_timeout(500)
-                detail_soup = BeautifulSoup(page.content(), "lxml")
-                main = detail_soup.select_one("main") or detail_soup
-                detail_text = _clean(main.get_text(" ", strip=True))
-                print(f"LINKEDIN_DETAIL status={detail_response.status if detail_response else 'n/a'} url={url}")
-            except Exception as exc:
-                print(f"LINKEDIN_DETAIL_ERROR url={url} error={exc}")
+            detail_text = ""
+            if not detail_blocked:
+                try:
+                    detail_response = page.goto(url, wait_until="domcontentloaded", timeout=35000)
+                    status = detail_response.status if detail_response else None
+                    if status == 200:
+                        page.wait_for_timeout(400)
+                        detail_text = _description_text(page.content())
+                    elif status == 429:
+                        detail_blocked = True
+                    print(f"LINKEDIN_DETAIL status={status or 'n/a'} description_bytes={len(detail_text)} url={url}")
+                except Exception as exc:
+                    print(f"LINKEDIN_DETAIL_ERROR url={url} error={exc}")
 
+            # Card title/company/location/date are always the trusted base. Detail text is
+            # included only when extracted from the job-description container itself.
             combined = _clean(f"{title} {company} {detail_text}")
             coords = locations.get(location.lower(), {}) if location else {}
             salary = _salary(combined)
@@ -155,10 +186,10 @@ def collect(source_config: dict, locations: dict) -> list[JobListing]:
                 application_deadline=_deadline(combined),
                 contract_type=contract,
                 piva_required=contract == "partita_iva",
-                adi="adi" in combined.lower(),
+                adi=bool(re.search(r"\badi\b", combined.lower())),
                 homecare=homecare,
-                homecare_only=_homecare_only(combined),
-                cooperative="cooperativa" in combined.lower(),
+                homecare_only=_homecare_only(title, combined),
+                cooperative="cooperativa" in f"{company} {detail_text}".lower(),
                 salary=salary,
                 salary_present=bool(salary),
             ))
