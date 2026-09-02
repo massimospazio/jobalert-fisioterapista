@@ -27,6 +27,17 @@ jobs:
       - name: Run unit tests
         run: python -m unittest tests/test_core.py -v
 
+      - name: Probe core sources for free
+        run: python tools/core_sources_probe.py
+
+      - name: Upload core source diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: core-source-diagnostics
+          path: diagnostics_core_sources/*
+          if-no-files-found: warn
+
       - name: Probe ZenRows on Bakeca
         if: ${{ env.ZENROWS_KEY != '' }}
         env:
