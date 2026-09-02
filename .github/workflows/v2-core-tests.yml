@@ -52,6 +52,20 @@ jobs:
           path: diagnostics_zenrows/*
           if-no-files-found: warn
 
+      - name: Extract baseline jobs
+        if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[baseline]') }}
+        env:
+          ZENROWS_KEY: ${{ secrets.ZENROWS_KEY }}
+        run: python tools/baseline_extract.py
+
+      - name: Upload baseline jobs
+        if: ${{ always() && (github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[baseline]')) }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: baseline-jobs
+          path: baseline/*
+          if-no-files-found: warn
+
       - name: Probe Brave Search on Bakeca
         if: ${{ env.BRAVE_API_KEY != '' }}
         env:
