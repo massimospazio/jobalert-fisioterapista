@@ -6,6 +6,9 @@ on:
       - v2-core
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   collect:
     if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[production]') }}
@@ -13,6 +16,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: v2-core
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -31,10 +36,25 @@ jobs:
           ZENROWS_KEY: ${{ secrets.ZENROWS_KEY }}
         run: python main_v2.py
 
-      - name: Upload audit
+      - name: Upload audit and new jobs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: job-alert-audit
-          path: logs/*.jsonl
+          name: job-alert-output
+          path: |
+            logs/*.jsonl
+            logs/new_jobs.json
           if-no-files-found: warn
+
+      - name: Persist state on v2-core
+        if: success()
+        run: |
+          if git diff --quiet -- state/baseline_state.json; then
+            echo "No state changes to persist"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add state/baseline_state.json
+          git commit -m "[state] Persist job alert state"
+          git push origin HEAD:v2-core
