@@ -124,6 +124,7 @@ def collect(source_config: dict, locations: dict) -> list[JobListing]:
         cards = soup.select(".base-search-card")
 
         candidates = []
+        skipped_outside_rm = 0
         for card in cards:
             title_node = card.select_one("h3.base-search-card__title")
             company_node = card.select_one("h4.base-search-card__subtitle")
@@ -139,6 +140,9 @@ def collect(source_config: dict, locations: dict) -> list[JobListing]:
             company = _clean(company_node.get_text(" ", strip=True)) if company_node else ""
             raw_location = _clean(location_node.get_text(" ", strip=True)) if location_node else ""
             location, province = _location(raw_location)
+            if province and province != "RM":
+                skipped_outside_rm += 1
+                continue
             published = time_node.get("datetime") if time_node and time_node.get("datetime") else None
             candidates.append((title, company, location, province, published, url))
             if len(candidates) >= limit:
@@ -146,7 +150,7 @@ def collect(source_config: dict, locations: dict) -> list[JobListing]:
 
         print(
             f"LINKEDIN_COLLECT status={response.status if response else 'n/a'} "
-            f"cards={len(cards)} candidates={len(candidates)}"
+            f"cards={len(cards)} candidates={len(candidates)} skipped_outside_rm={skipped_outside_rm}"
         )
 
         detail_blocked = False
@@ -165,8 +169,6 @@ def collect(source_config: dict, locations: dict) -> list[JobListing]:
                 except Exception as exc:
                     print(f"LINKEDIN_DETAIL_ERROR url={url} error={exc}")
 
-            # Card title/company/location/date are always the trusted base. Detail text is
-            # included only when extracted from the job-description container itself.
             combined = _clean(f"{title} {company} {detail_text}")
             coords = locations.get(location.lower(), {}) if location else {}
             salary = _salary(combined)
