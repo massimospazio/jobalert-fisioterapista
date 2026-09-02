@@ -33,6 +33,7 @@ jobs:
       - name: Run integrated agent
         env:
           ALLOW_PAID_SOURCES: "true"
+          PERSIST_BASELINE_DATA: "true"
           ZENROWS_KEY: ${{ secrets.ZENROWS_KEY }}
         run: python main_v2.py
 
@@ -47,7 +48,7 @@ jobs:
           ALERT_EMAIL_TO: ${{ secrets.ALERT_EMAIL_TO }}
         run: python tools/notify_email.py
 
-      - name: Upload audit and new jobs
+      - name: Upload audit, new jobs and baseline
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -55,17 +56,19 @@ jobs:
           path: |
             logs/*.jsonl
             logs/new_jobs.json
+            data/baseline_jobs.json
+            data/baseline_jobs.csv
           if-no-files-found: warn
 
-      - name: Persist state on v2-core
+      - name: Persist state and baseline on v2-core
         if: success()
         run: |
-          if git diff --quiet -- state/baseline_state.json; then
-            echo "No state changes to persist"
+          if git diff --quiet -- state/baseline_state.json data/baseline_jobs.json data/baseline_jobs.csv; then
+            echo "No state or baseline changes to persist"
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add state/baseline_state.json
-          git commit -m "[state] Persist job alert state"
+          git add state/baseline_state.json data/baseline_jobs.json data/baseline_jobs.csv
+          git commit -m "[state] Persist job alert state and baseline"
           git push origin HEAD:v2-core
