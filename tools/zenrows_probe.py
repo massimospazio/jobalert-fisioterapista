@@ -8,6 +8,7 @@ from bs4 import BeautifulSoup
 
 ZENROWS_ENDPOINT = "https://api.zenrows.com/v1/"
 BAKECA_URL = "https://www.bakeca.it/annunci/medicina-salute-assistenza/luogo/lazio/?keyword=fisioterapista"
+ESTIMATED_CREDITS_PER_REQUEST = 25
 
 
 def extract_links(html: str) -> list[str]:
@@ -21,6 +22,21 @@ def extract_links(html: str) -> list[str]:
         if "bakeca.it" in url.lower() and url not in links:
             links.append(url)
     return links
+
+
+def header_value(response: requests.Response, name: str) -> str:
+    return response.headers.get(name, "n/a")
+
+
+def log_zenrows_usage(response: requests.Response) -> None:
+    print(
+        "ZENROWS_USAGE "
+        f"request_cost={header_value(response, 'X-Request-Cost')} "
+        f"estimated_credits={ESTIMATED_CREDITS_PER_REQUEST} "
+        f"concurrency_limit={header_value(response, 'Concurrency-Limit')} "
+        f"concurrency_remaining={header_value(response, 'Concurrency-Remaining')} "
+        f"request_id={header_value(response, 'X-Request-Id')}"
+    )
 
 
 def main() -> None:
@@ -42,7 +58,8 @@ def main() -> None:
     links = extract_links(html)
     probable_jobs = [
         url for url in links
-        if any(token in url.lower() for token in ["/dettaglio/", "fisioterap", "medicina-salute-assistenza"])
+        if "/dettaglio/medicina-salute-assistenza/" in url.lower()
+        and "?click=" not in url.lower()
     ]
 
     diagnostics = Path("diagnostics_zenrows")
@@ -56,6 +73,7 @@ def main() -> None:
         f"title={title!r} links={len(links)} probable_jobs={len(probable_jobs)} "
         f"contains_fisio={'fisioterap' in html.lower()}"
     )
+    log_zenrows_usage(response)
     for url in probable_jobs[:30]:
         print(f"ZENROWS_JOB_LINK {url}")
 
