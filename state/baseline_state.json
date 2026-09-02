@@ -1,26 +1,171 @@
 {
   "version": 2,
   "jobs": {
-    "c5aabd0a6c03c8807608eb06": {"source": "linkedin", "url": "https://it.linkedin.com/jobs/view/fisioterapista-at-istitutoauxologico-4413165637"},
-    "c243ed6c06247d271b86fba3": {"source": "linkedin", "url": "https://it.linkedin.com/jobs/view/fisioterapista-at-centro-di-riabilitazione-villaggio-eugenio-litta-3762487118"},
-    "02e80c3d3b0464329c10c168": {"source": "linkedin", "url": "https://it.linkedin.com/jobs/view/fisioterapista-at-casa-di-riposo-villa-linda-4449628042"},
-    "68e867711136af32a8f88488": {"source": "linkedin", "url": "https://it.linkedin.com/jobs/view/fisioterapista-at-fisioflow-4458768583"},
-    "0e4be45cc1c2919de7a3a69d": {"source": "linkedin", "url": "https://it.linkedin.com/jobs/view/fisioterapista-at-feedstar-it-4461067606"},
-    "c129f4b7dfa4122267ce27f5": {"source": "linkedin", "url": "https://it.linkedin.com/jobs/view/fisioterapista-at-idi-irccs-istituto-dermopatico-dell-immacolata-4450129835"},
-    "701002eede37323f67be0098": {"source": "linkedin", "url": "https://it.linkedin.com/jobs/view/n-1-cococo-per-fisioterapista-at-fondazione-policlinico-universitario-agostino-gemelli-irccs-4448861939"},
-    "5969e45d40003a246fb13877": {"source": "linkedin", "url": "https://it.linkedin.com/jobs/view/fisioterapista-at-centro-medico-e-fisioterapico-eos-4461792106"},
-    "7a33e4de80e548c36cace4b3": {"source": "bakeca", "url": "https://latina.bakeca.it/dettaglio/medicina-salute-assistenza/fisioterapista-latina-lt-snuc295526362"},
-    "4d38f0aecc397a27c4039f14": {"source": "bakeca", "url": "https://roma.bakeca.it/dettaglio/medicina-salute-assistenza/fisioterapista-anzio-rm-wdxr296586814"},
-    "87d54b07a2b2763878717aef": {"source": "bakeca", "url": "https://latina.bakeca.it/dettaglio/medicina-salute-assistenza/fisioterapista-cori-lt-shgq296586810"},
-    "e463c35be56d79632950ffe8": {"source": "bakeca", "url": "https://roma.bakeca.it/dettaglio/medicina-salute-assistenza/fisioterapista-marino-rm-7m3m295526442"},
-    "9e24946d160843ca7ccfe7c7": {"source": "bakeca", "url": "https://roma.bakeca.it/dettaglio/medicina-salute-assistenza/fisioterapista-9xj6297811464"},
-    "bb2b0b70076daf8e47212479": {"source": "bakeca", "url": "https://roma.bakeca.it/dettaglio/medicina-salute-assistenza/fisioterapisti-bhy5287824066"},
-    "859892c9bd375132db39e6fe": {"source": "bakeca", "url": "https://roma.bakeca.it/dettaglio/medicina-salute-assistenza/ricerca-fisioterapista-2hyr297352136"},
-    "14665d0fded2f232cf4a46fc": {"source": "bakeca", "url": "https://roma.bakeca.it/dettaglio/medicina-salute-assistenza/cercasi-fisioterapisti-i3r2263179940"},
-    "89cee7edca6c226f673b58d8": {"source": "ofi_lazio", "url": "https://www.ofilazio.it/wp-content/uploads/2026/07/Richiesta-fisioterapista_rotated.pdf"},
-    "565aa2ff9bbb974948bec557": {"source": "ofi_lazio", "url": "https://www.ofilazio.it/wp-content/uploads/2026/06/RICERCA-PERSONALE.pdf"},
-    "9cd9d51cc3611e39deadc121": {"source": "ofi_lazio", "url": "https://www.ofilazio.it/wp-content/uploads/2026/06/offerta-lavoro-signed.pdf"},
-    "1be046c1ab6cdf25ebcc19b8": {"source": "ofi_lazio", "url": "https://www.ofilazio.it/wp-content/uploads/2026/05/Medical-Service-Assistance-Srl-Societa-Benefit.pdf"}
+    "c5aabd0a6c03c8807608eb06": {
+      "source": "LinkedIn",
+      "url": "https://it.linkedin.com/jobs/view/fisioterapista-at-istitutoauxologico-4413165637",
+      "title": "Fisioterapista",
+      "company": "Auxologico IRCCS",
+      "location": "Roma",
+      "province": "RM",
+      "published_at": "2026-05-13"
+    },
+    "c243ed6c06247d271b86fba3": {
+      "source": "LinkedIn",
+      "url": "https://it.linkedin.com/jobs/view/fisioterapista-at-centro-di-riabilitazione-villaggio-eugenio-litta-3762487118",
+      "title": "Fisioterapista",
+      "company": "Centro di Riabilitazione \"Villaggio Eugenio Litta\"",
+      "location": "Grottaferrata",
+      "province": "RM",
+      "published_at": "2026-08-31"
+    },
+    "02e80c3d3b0464329c10c168": {
+      "source": "LinkedIn",
+      "url": "https://it.linkedin.com/jobs/view/fisioterapista-at-casa-di-riposo-villa-linda-4449628042",
+      "title": "Fisioterapista",
+      "company": "Casa di Riposo Villa Linda",
+      "location": "Nettuno",
+      "province": "RM",
+      "published_at": "2026-08-05"
+    },
+    "68e867711136af32a8f88488": {
+      "source": "LinkedIn",
+      "url": "https://it.linkedin.com/jobs/view/fisioterapista-at-fisioflow-4458768583",
+      "title": "Fisioterapista",
+      "company": "Fisioflow",
+      "location": "Roma",
+      "province": "RM",
+      "published_at": "2026-08-28"
+    },
+    "0e4be45cc1c2919de7a3a69d": {
+      "source": "LinkedIn",
+      "url": "https://it.linkedin.com/jobs/view/fisioterapista-at-feedstar-it-4461067606",
+      "title": "Fisioterapista",
+      "company": "Feedstar.it",
+      "location": "Roma",
+      "province": "RM",
+      "published_at": "2026-08-31"
+    },
+    "c129f4b7dfa4122267ce27f5": {
+      "source": "LinkedIn",
+      "url": "https://it.linkedin.com/jobs/view/fisioterapista-at-idi-irccs-istituto-dermopatico-dell-immacolata-4450129835",
+      "title": "Fisioterapista",
+      "company": "IDI IRCCS - Istituto Dermopatico dell'Immacolata",
+      "location": "Roma",
+      "province": "RM",
+      "published_at": "2026-08-12"
+    },
+    "701002eede37323f67be0098": {
+      "source": "LinkedIn",
+      "url": "https://it.linkedin.com/jobs/view/n-1-cococo-per-fisioterapista-at-fondazione-policlinico-universitario-agostino-gemelli-irccs-4448861939",
+      "title": "N. 1 cococo per Fisioterapista",
+      "company": "Fondazione Policlinico Universitario Agostino Gemelli IRCCS",
+      "location": "Roma",
+      "province": "RM",
+      "published_at": "2026-09-02"
+    },
+    "5969e45d40003a246fb13877": {
+      "source": "LinkedIn",
+      "url": "https://it.linkedin.com/jobs/view/fisioterapista-at-centro-medico-e-fisioterapico-eos-4461792106",
+      "title": "Fisioterapista",
+      "company": "Centro Medico e Fisioterapico EOS",
+      "location": "Roma",
+      "province": "RM",
+      "published_at": "2026-09-01"
+    },
+    "7a33e4de80e548c36cace4b3": {
+      "source": "bakeca",
+      "url": "https://latina.bakeca.it/dettaglio/medicina-salute-assistenza/fisioterapista-latina-lt-snuc295526362"
+    },
+    "4d38f0aecc397a27c4039f14": {
+      "source": "Bakeca",
+      "url": "https://roma.bakeca.it/dettaglio/medicina-salute-assistenza/fisioterapista-anzio-rm-wdxr296586814",
+      "title": "FISIOTERAPISTA - ANZIO (RM)",
+      "company": "S.M.E.C. SRLS",
+      "location": "ANZIO",
+      "province": "RM",
+      "published_at": "2026-09-01"
+    },
+    "87d54b07a2b2763878717aef": {
+      "source": "bakeca",
+      "url": "https://latina.bakeca.it/dettaglio/medicina-salute-assistenza/fisioterapista-cori-lt-shgq296586810"
+    },
+    "e463c35be56d79632950ffe8": {
+      "source": "Bakeca",
+      "url": "https://roma.bakeca.it/dettaglio/medicina-salute-assistenza/fisioterapista-marino-rm-7m3m295526442",
+      "title": "FISIOTERAPISTA - MARINO (RM)",
+      "company": "S.M.E.C. SRLS",
+      "location": "MARINO",
+      "province": "RM",
+      "published_at": "2026-09-02"
+    },
+    "9e24946d160843ca7ccfe7c7": {
+      "source": "Bakeca",
+      "url": "https://roma.bakeca.it/dettaglio/medicina-salute-assistenza/fisioterapista-9xj6297811464",
+      "title": "FISIOTERAPISTA",
+      "company": "cooperativa sociale",
+      "location": "Marino",
+      "province": "RM",
+      "published_at": "2026-08-28"
+    },
+    "bb2b0b70076daf8e47212479": {
+      "source": "Bakeca",
+      "url": "https://roma.bakeca.it/dettaglio/medicina-salute-assistenza/fisioterapisti-bhy5287824066",
+      "title": "FISIOTERAPISTI",
+      "company": "ISTITUTO SANTA CECILIA",
+      "location": "Civitavecchia",
+      "province": "RM",
+      "published_at": "2026-09-02"
+    },
+    "859892c9bd375132db39e6fe": {
+      "source": "Bakeca",
+      "url": "https://roma.bakeca.it/dettaglio/medicina-salute-assistenza/ricerca-fisioterapista-2hyr297352136",
+      "title": "RICERCA FISIOTERAPISTA",
+      "company": "COOPERATIVA SOCIALE",
+      "location": "Marino",
+      "province": "RM",
+      "published_at": "2026-08-11"
+    },
+    "14665d0fded2f232cf4a46fc": {
+      "source": "Bakeca",
+      "url": "https://roma.bakeca.it/dettaglio/medicina-salute-assistenza/cercasi-fisioterapisti-i3r2263179940",
+      "title": "Cercasi Fisioterapisti",
+      "company": "Studio Fisioterapico Morgagni Srl",
+      "location": "Roma",
+      "province": "RM",
+      "published_at": "2026-09-01"
+    },
+    "89cee7edca6c226f673b58d8": {
+      "source": "OFI Lazio",
+      "url": "https://www.ofilazio.it/wp-content/uploads/2026/07/Richiesta-fisioterapista_rotated.pdf",
+      "title": "Fisioterapista",
+      "company": "Azienda di Servizi alla Persona disabile visiva S. Alessio – Margherita di Savoia",
+      "location": "",
+      "province": "",
+      "published_at": null
+    },
+    "565aa2ff9bbb974948bec557": {
+      "source": "ofi_lazio",
+      "url": "https://www.ofilazio.it/wp-content/uploads/2026/06/RICERCA-PERSONALE.pdf"
+    },
+    "9cd9d51cc3611e39deadc121": {
+      "source": "OFI Lazio",
+      "url": "https://www.ofilazio.it/wp-content/uploads/2026/06/offerta-lavoro-signed.pdf",
+      "title": "Fisioterapista",
+      "company": "Istituto Fisioterapico di riabilitazione C. Franceschini",
+      "location": "Roma",
+      "province": "RM",
+      "published_at": "2026-06-18"
+    },
+    "1be046c1ab6cdf25ebcc19b8": {
+      "source": "OFI Lazio",
+      "url": "https://www.ofilazio.it/wp-content/uploads/2026/05/Medical-Service-Assistance-Srl-Societa-Benefit.pdf",
+      "title": "Fisioterapista",
+      "company": "Medical Service Assistance Srl",
+      "location": "Roma",
+      "province": "RM",
+      "published_at": "2026-04-16"
+    }
   },
   "opportunities": {
     "cee1af3bc85628663783ded7": {},
