@@ -1,0 +1,40 @@
+name: Job Alert Production Run
+
+on:
+  push:
+    branches:
+      - v2-core
+  workflow_dispatch:
+
+jobs:
+  collect:
+    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[production]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install "PyYAML>=6.0" requests beautifulsoup4 lxml playwright pypdf
+
+      - name: Install Chromium
+        run: python -m playwright install chromium --with-deps
+
+      - name: Run integrated agent
+        env:
+          ALLOW_PAID_SOURCES: "true"
+          ZENROWS_KEY: ${{ secrets.ZENROWS_KEY }}
+        run: python main_v2.py
+
+      - name: Upload audit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: job-alert-audit
+          path: logs/*.jsonl
+          if-no-files-found: warn
