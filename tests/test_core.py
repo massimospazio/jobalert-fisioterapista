@@ -4,6 +4,7 @@ from core.config import load_all
 from core.dedup import deduplicate_jobs, opportunity_key
 from core.filters import evaluate_filters
 from core.models import JobListing
+from core.normalizer import enrich_job, extract_contract, extract_deadline, extract_location, extract_salary
 from core.scoring import haversine_km, score_job
 from core.state import build_state, merge_state, split_new_jobs
 
@@ -89,6 +90,26 @@ class CoreTests(unittest.TestCase):
         self.assertEqual(len(merged["jobs"]), 2)
         self.assertIn("opportunity-123", merged["opportunities"])
         self.assertEqual(merged["version"], 2)
+
+    def test_normalizer_extracts_contract_variants(self):
+        self.assertEqual(extract_contract("Collaborazione coordinata e continuativa"), "cococo")
+        self.assertEqual(extract_contract("Rapporto in libera professione"), "partita_iva")
+        self.assertEqual(extract_contract("Contratto a tempo indeterminato"), "tempo_indeterminato")
+
+    def test_normalizer_extracts_salary_and_deadline(self):
+        text = "RAL: 32.000. Candidature entro il 15/09/2026"
+        self.assertEqual(extract_salary(text), "RAL: 32.000")
+        self.assertEqual(extract_deadline(text), "2026-09-15")
+        self.assertEqual(extract_deadline("termine ultimo 30 settembre 2026"), "2026-09-30")
+
+    def test_normalizer_extracts_location_and_coordinates(self):
+        self.assertEqual(extract_location("Sede di lavoro: Ciampino"), ("Ciampino", "RM"))
+        job = JobListing(source="test", url="https://example.test/norm", title="Fisioterapista - Frascati (RM)", text="Contratto a tempo determinato")
+        enriched = enrich_job(job, self.config["locations"]["locations"])
+        self.assertEqual(enriched.location, "Frascati")
+        self.assertEqual(enriched.province, "RM")
+        self.assertIsNotNone(enriched.latitude)
+        self.assertEqual(enriched.contract_type, "tempo_determinato")
 
 
 if __name__ == "__main__":
