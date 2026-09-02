@@ -16,6 +16,7 @@ class JobListing:
     employment_type: str = "non_specificato"
     piva_required: bool = False
     adi: bool = False
+    homecare_only: bool = False
     salary_present: bool = False
 
 
