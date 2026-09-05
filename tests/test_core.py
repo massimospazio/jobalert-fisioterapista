@@ -1,5 +1,7 @@
 import unittest
 
+from bs4 import BeautifulSoup
+
 from core.config import load_all
 from core.dedup import deduplicate_jobs, opportunity_key
 from core.filters import evaluate_filters
@@ -7,6 +9,7 @@ from core.models import JobListing
 from core.normalizer import enrich_job, extract_contract, extract_deadline, extract_location, extract_salary
 from core.scoring import haversine_km, score_job
 from core.state import build_state, merge_state, split_new_jobs
+from sources.indeed import _canonical as indeed_canonical, _job_key as indeed_job_key
 
 
 class CoreTests(unittest.TestCase):
@@ -121,6 +124,24 @@ class CoreTests(unittest.TestCase):
         self.assertEqual(enriched.province, "RM")
         self.assertIsNotNone(enriched.latitude)
         self.assertEqual(enriched.contract_type, "tempo_determinato")
+
+    def test_indeed_job_key_prefers_data_jk(self):
+        anchor = BeautifulSoup('<a data-jk="abc123" href="/rc/clk?jk=other">Job</a>', "html.parser").a
+        self.assertEqual(indeed_job_key(anchor), "abc123")
+
+    def test_indeed_job_key_from_query_and_canonical_url(self):
+        anchor = BeautifulSoup('<a href="/rc/clk?jk=def456&from=serp">Job</a>', "html.parser").a
+        self.assertEqual(indeed_job_key(anchor), "def456")
+        self.assertEqual(
+            indeed_canonical("https://it.indeed.com/jobs?q=fisioterapista", anchor),
+            "https://it.indeed.com/viewjob?jk=def456",
+        )
+
+    def test_indeed_distinct_jk_remain_distinct(self):
+        first = BeautifulSoup('<a data-jk="one" href="/viewjob?jk=one">One</a>', "html.parser").a
+        second = BeautifulSoup('<a data-jk="two" href="/viewjob?jk=two">Two</a>', "html.parser").a
+        search_url = "https://it.indeed.com/jobs?q=fisioterapista"
+        self.assertNotEqual(indeed_canonical(search_url, first), indeed_canonical(search_url, second))
 
 
 if __name__ == "__main__":
