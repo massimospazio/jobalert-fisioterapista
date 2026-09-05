@@ -46,7 +46,7 @@ def main() -> None:
         return
 
     host = os.environ.get("SMTP_HOST", "").strip()
-    port = int(os.environ.get("SMTP_PORT", "587"))
+    port = int(os.environ.get("SMTP_PORT", "").strip() or "587")
     username = os.environ.get("SMTP_USERNAME", "").strip()
     password = os.environ.get("SMTP_PASSWORD", "")
     sender = os.environ.get("ALERT_EMAIL_FROM", username).strip()
