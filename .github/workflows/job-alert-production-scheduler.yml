@@ -1,0 +1,101 @@
+name: Job Alert Production Scheduler
+
+on:
+  schedule:
+    - cron: "0 7 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout v2-core
+        uses: actions/checkout@v4
+        with:
+          ref: v2-core
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install "PyYAML>=6.0" requests beautifulsoup4 lxml playwright pypdf
+
+      - name: Install Chromium
+        run: python -m playwright install chromium --with-deps
+
+      - name: Run integrated agent
+        id: agent
+        env:
+          ALLOW_PAID_SOURCES: "true"
+          ENABLE_INDEED_GAPFILL: "true"
+          PERSIST_BASELINE_DATA: "true"
+          ZENROWS_KEY: ${{ secrets.ZENROWS_KEY }}
+        run: |
+          mkdir -p logs
+          set -o pipefail
+          python main_v2.py 2>&1 | tee logs/run.log
+
+      - name: Analyze run health
+        if: always()
+        run: python tools/analyze_run_health.py
+
+      - name: Generate HTML report
+        if: always()
+        run: python tools/generate_report.py
+
+      - name: Send new-job email
+        if: ${{ steps.agent.outcome == 'success' }}
+        continue-on-error: true
+        env:
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          ALERT_EMAIL_FROM: ${{ secrets.ALERT_EMAIL_FROM }}
+          ALERT_EMAIL_TO: ${{ secrets.ALERT_EMAIL_TO }}
+        run: python tools/notify_email.py
+
+      - name: Send Telegram heartbeat
+        if: always()
+        continue-on-error: true
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          JOB_STATUS: ${{ steps.agent.outcome }}
+          REPORT_URL: https://massimospazio.github.io/jobalert-fisioterapista/latest.html
+        run: python tools/notify_telegram.py
+
+      - name: Upload audit, logs, report and baseline
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: job-alert-output
+          path: |
+            logs/*.jsonl
+            logs/run.log
+            logs/run_health.json
+            logs/new_jobs.json
+            logs/run_summary.json
+            data/baseline_jobs.json
+            data/baseline_jobs.csv
+            docs/latest.html
+            state/zenrows_usage.json
+          if-no-files-found: warn
+
+      - name: Persist state, baseline, report and ZenRows usage on v2-core
+        if: ${{ steps.agent.outcome == 'success' }}
+        run: |
+          if git diff --quiet -- state/baseline_state.json state/zenrows_usage.json data/baseline_jobs.json data/baseline_jobs.csv docs/latest.html; then
+            echo "No state, baseline, report or ZenRows usage changes to persist"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add state/baseline_state.json state/zenrows_usage.json data/baseline_jobs.json data/baseline_jobs.csv docs/latest.html
+          git commit -m "[state] Persist job alert state, baseline, report and ZenRows usage"
+          git push origin HEAD:v2-core
