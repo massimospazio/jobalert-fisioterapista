@@ -8,7 +8,7 @@ if str(ROOT) not in sys.path:
 
 import yaml
 
-from core.dedup import opportunity_key
+from core.dedup import deduplicate_jobs, opportunity_key
 from core.filters import evaluate_filters
 from core.normalizer import enrich_job
 from sources import indeed
@@ -38,10 +38,13 @@ def main():
 
     jobs, usage = indeed.collect(source_cfg, locations)
     enriched = [enrich_job(job, locations) for job in jobs]
+    unique_jobs, duplicates_internal = deduplicate_jobs(enriched)
 
     rows = []
     counts = {
         "raw": len(jobs),
+        "unique": len(unique_jobs),
+        "duplicates_internal": duplicates_internal,
         "included": 0,
         "excluded": 0,
         "duplicates_baseline": 0,
@@ -50,7 +53,7 @@ def main():
         "province_excluded": 0,
     }
 
-    for job in enriched:
+    for job in unique_jobs:
         result = evaluate_filters(job, filters_cfg)
         key = opportunity_key(job)
         duplicate = key in baseline_keys
@@ -89,7 +92,8 @@ def main():
 
     print(
         "INDEED_BENCHMARK "
-        f"raw={counts['raw']} included={counts['included']} excluded={counts['excluded']} "
+        f"raw={counts['raw']} unique={counts['unique']} duplicates_internal={counts['duplicates_internal']} "
+        f"included={counts['included']} excluded={counts['excluded']} "
         f"duplicates_baseline={counts['duplicates_baseline']} new_incremental={counts['new_incremental']} "
         f"homecare_only_excluded={counts['homecare_only_excluded']} province_excluded={counts['province_excluded']}"
     )
