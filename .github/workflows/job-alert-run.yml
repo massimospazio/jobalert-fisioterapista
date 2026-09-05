@@ -78,17 +78,18 @@ jobs:
             data/baseline_jobs.json
             data/baseline_jobs.csv
             docs/latest.html
+            state/zenrows_usage.json
           if-no-files-found: warn
 
-      - name: Persist state, baseline and report on v2-core
+      - name: Persist state, baseline, report and ZenRows usage on v2-core
         if: ${{ steps.agent.outcome == 'success' }}
         run: |
-          if git diff --quiet -- state/baseline_state.json data/baseline_jobs.json data/baseline_jobs.csv docs/latest.html; then
-            echo "No state, baseline or report changes to persist"
+          if git diff --quiet -- state/baseline_state.json state/zenrows_usage.json data/baseline_jobs.json data/baseline_jobs.csv docs/latest.html; then
+            echo "No state, baseline, report or ZenRows usage changes to persist"
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add state/baseline_state.json data/baseline_jobs.json data/baseline_jobs.csv docs/latest.html
-          git commit -m "[state] Persist job alert state, baseline and report"
+          git add state/baseline_state.json state/zenrows_usage.json data/baseline_jobs.json data/baseline_jobs.csv docs/latest.html
+          git commit -m "[state] Persist job alert state, baseline, report and ZenRows usage"
           git push origin HEAD:v2-core
