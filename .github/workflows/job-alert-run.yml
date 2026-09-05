@@ -5,13 +5,15 @@ on:
     branches:
       - v2-core
   workflow_dispatch:
+  schedule:
+    - cron: "0 7 * * *"
 
 permissions:
   contents: write
 
 jobs:
   collect:
-    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[production]') }}
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' || contains(github.event.head_commit.message, '[production]') }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -37,7 +39,14 @@ jobs:
           ENABLE_INDEED_GAPFILL: "true"
           PERSIST_BASELINE_DATA: "true"
           ZENROWS_KEY: ${{ secrets.ZENROWS_KEY }}
-        run: python main_v2.py
+        run: |
+          mkdir -p logs
+          set -o pipefail
+          python main_v2.py 2>&1 | tee logs/run.log
+
+      - name: Analyze run health
+        if: always()
+        run: python tools/analyze_run_health.py
 
       - name: Generate HTML report
         if: always()
@@ -66,13 +75,15 @@ jobs:
           REPORT_URL: https://massimospazio.github.io/jobalert-fisioterapista/latest.html
         run: python tools/notify_telegram.py
 
-      - name: Upload audit, new jobs, report and baseline
+      - name: Upload audit, logs, report and baseline
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: job-alert-output
           path: |
             logs/*.jsonl
+            logs/run.log
+            logs/run_health.json
             logs/new_jobs.json
             logs/run_summary.json
             data/baseline_jobs.json
