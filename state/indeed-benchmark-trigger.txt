@@ -1,2 +1,2 @@
 Trigger one-shot Indeed coverage benchmark on 2026-09-05.
-run=2
+run=3
