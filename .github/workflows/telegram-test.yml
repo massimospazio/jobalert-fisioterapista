@@ -2,6 +2,11 @@ name: Telegram Test
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - v2-core
+    paths:
+      - state/telegram-test-trigger.txt
 
 jobs:
   telegram-test:
