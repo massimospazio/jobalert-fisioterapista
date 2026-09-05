@@ -12,6 +12,7 @@ from core.scoring import score_job
 from core.state import load_state, merge_state, save_state_dict, stable_job_id
 from reports.audit import format_console_audit, write_audit
 from sources.bakeca import collect as collect_bakeca
+from sources.indeed import collect as collect_indeed
 from sources.linkedin import collect as collect_linkedin
 from sources.ofi_lazio import collect as collect_ofi_lazio
 
@@ -49,10 +50,14 @@ BASELINE_COLUMNS = [
 ]
 
 
+def _truthy_env(name: str) -> bool:
+    return os.environ.get(name, "").lower() in {"1", "true", "yes"}
+
+
 def _collect_source(source: dict, locations: dict):
     source_id = source.get("id")
     if source_id == "bakeca":
-        if os.environ.get("ALLOW_PAID_SOURCES", "").lower() not in {"1", "true", "yes"}:
+        if not _truthy_env("ALLOW_PAID_SOURCES"):
             print("SOURCE_SKIPPED_PAID bakeca: ALLOW_PAID_SOURCES non attivo")
             return []
         return collect_bakeca(source, locations)
@@ -128,7 +133,11 @@ def main() -> None:
     known_ids = set(baseline_state.get("jobs", {}).keys())
     known_opportunities = set(baseline_state.get("opportunities", {}).keys())
 
-    sources = [source for source in config["sources"].get("sources", []) if source.get("enabled")]
+    source_configs = config["sources"].get("sources", [])
+    sources = [
+        source for source in source_configs
+        if source.get("enabled") and source.get("id") != "indeed"
+    ]
     all_jobs = []
 
     for source in sources:
@@ -142,10 +151,38 @@ def main() -> None:
         except Exception as exc:
             print(f"SOURCE_ERROR {source_id}: {exc}")
 
+    primary_unique, primary_duplicates = deduplicate_jobs(all_jobs)
+    print(
+        f"\nPRIMARY_DEDUP raw={len(all_jobs)} unique_opportunities={len(primary_unique)} "
+        f"duplicates_removed={primary_duplicates}"
+    )
+
+    indeed_config = next((source for source in source_configs if source.get("id") == "indeed"), None)
+    if _truthy_env("ENABLE_INDEED_GAPFILL"):
+        if not _truthy_env("ALLOW_PAID_SOURCES"):
+            print("SOURCE_SKIPPED_PAID indeed: ALLOW_PAID_SOURCES non attivo")
+        elif not indeed_config:
+            print("SOURCE_ERROR indeed: configurazione non trovata")
+        else:
+            print("\nRACCOLTA FONTE: Indeed (gap filler)")
+            try:
+                indeed_jobs, usage = collect_indeed(indeed_config, locations)
+                indeed_jobs = [enrich_job(job, locations) for job in indeed_jobs]
+                all_jobs.extend(indeed_jobs)
+                print(
+                    f"INDEED_GAPFILL primary_unique={len(primary_unique)} collected={len(indeed_jobs)} "
+                    f"request_cost={usage.get('request_cost', 'n/a')}"
+                )
+            except Exception as exc:
+                print(f"SOURCE_ERROR indeed: {exc}")
+    else:
+        print("INDEED_GAPFILL_SKIPPED ENABLE_INDEED_GAPFILL non attivo")
+
     unique_jobs, duplicate_count = deduplicate_jobs(all_jobs)
+    incremental_after_indeed = max(0, len(unique_jobs) - len(primary_unique))
     print(
         f"\nDEDUP raw={len(all_jobs)} unique_opportunities={len(unique_jobs)} "
-        f"duplicates_removed={duplicate_count}"
+        f"duplicates_removed={duplicate_count} indeed_incremental={incremental_after_indeed}"
     )
     _print_coverage(unique_jobs)
 
@@ -190,7 +227,7 @@ def main() -> None:
     new_jobs_file = _write_new_jobs(new_jobs_output)
 
     baseline_files = None
-    if os.environ.get("PERSIST_BASELINE_DATA", "").lower() in {"1", "true", "yes"}:
+    if _truthy_env("PERSIST_BASELINE_DATA"):
         baseline_files = _write_baseline(baseline_output)
         print(f"BASELINE_EXPORT count={len(baseline_output)} json={baseline_files[0]} csv={baseline_files[1]}")
     else:
