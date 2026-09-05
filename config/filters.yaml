@@ -31,4 +31,5 @@ exclusion_rules:
 allowed_provinces:
   - RM
 exclude_homecare_only: true
+exclude_cooperatives: true
 require_positive_match: true
