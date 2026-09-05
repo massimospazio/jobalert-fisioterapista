@@ -54,7 +54,7 @@ jobs:
         run: python tools/generate_report.py
 
       - name: Send new-job email
-        if: ${{ steps.agent.outcome == 'success' }}
+        if: ${{ always() && steps.agent.outcome == 'success' }}
         continue-on-error: true
         env:
           SMTP_HOST: ${{ secrets.SMTP_HOST }}
@@ -93,7 +93,7 @@ jobs:
           if-no-files-found: warn
 
       - name: Persist state, baseline, report and ZenRows usage on v2-core
-        if: ${{ steps.agent.outcome == 'success' }}
+        if: ${{ always() && steps.agent.outcome == 'success' }}
         run: |
           if git diff --quiet -- state/baseline_state.json state/zenrows_usage.json data/baseline_jobs.json data/baseline_jobs.csv docs/latest.html; then
             echo "No state, baseline, report or ZenRows usage changes to persist"
