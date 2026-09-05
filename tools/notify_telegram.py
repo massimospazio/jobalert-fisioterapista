@@ -48,27 +48,31 @@ def main() -> None:
     report_url = os.environ.get("REPORT_URL", "").strip()
 
     if status == "success":
-        icon = "🟢"
-        label = "OK"
+        icon, label = "🟢", "OK"
     elif status == "cancelled":
-        icon = "🟠"
-        label = "CANCELLED"
+        icon, label = "🟠", "CANCELLED"
     else:
-        icon = "🔴"
-        label = "FAILED"
+        icon, label = "🔴", "FAILED"
 
     lines = [f"{icon} Job Alert Fisioterapista — {label}"]
     if summary:
-        lines += [
-            "",
-            f"Elaborati: {summary.get('raw_audit_records', 0)}",
-            f"Inclusi: {summary.get('included', 0)}",
-            f"Esclusi: {summary.get('excluded', 0)}",
-            f"Nuovi: {summary.get('new', len(new_jobs))}",
-        ]
+        lines += ["", f"Elaborati: {summary.get('raw_audit_records', 0)}", f"Inclusi: {summary.get('included', 0)}", f"Esclusi: {summary.get('excluded', 0)}", f"Nuovi: {summary.get('new', len(new_jobs))}"]
         sources = summary.get("source_counts") or {}
         if sources:
             lines.append("Fonti: " + " · ".join(f"{k} {v}" for k, v in sorted(sources.items())))
+        zr = summary.get("zenrows") or {}
+        if zr:
+            risk_icon = {"SAFE": "🟢", "WARNING": "🟠", "RISK": "🔴"}.get(zr.get("risk"), "⚪")
+            lines += [
+                "",
+                f"{risk_icon} ZenRows: {zr.get('consumed', 0)}/{zr.get('monthly_limit', 5000)} usati · {zr.get('remaining', 0)} residui",
+                f"Stima fine mese: {zr.get('projected_consumed', 0)}/{zr.get('monthly_limit', 5000)} ({zr.get('projected_pct', 0)}%)",
+            ]
+            every = int(zr.get("recommended_every_days") or 1)
+            if every > 1:
+                lines.append(f"⚠️ Frequenza consigliata: ogni {every} giorni")
+            else:
+                lines.append("Frequenza giornaliera sostenibile")
 
     if new_jobs:
         lines += ["", "Nuove opportunità:"]
@@ -81,11 +85,7 @@ def main() -> None:
     if report_url:
         lines.append(f"Report HTML: {report_url}")
 
-    response = requests.post(
-        f"https://api.telegram.org/bot{token}/sendMessage",
-        json={"chat_id": chat_id, "text": "\n".join(lines), "disable_web_page_preview": True},
-        timeout=30,
-    )
+    response = requests.post(f"https://api.telegram.org/bot{token}/sendMessage", json={"chat_id": chat_id, "text": "\n".join(lines), "disable_web_page_preview": True}, timeout=30)
     response.raise_for_status()
     print(f"TELEGRAM_SENT status={status} new_jobs={len(new_jobs)}")
 
