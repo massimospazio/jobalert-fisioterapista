@@ -46,6 +46,12 @@ class CoreTests(unittest.TestCase):
         result = evaluate_filters(job, self.config["filters"])
         self.assertTrue(result.included)
 
+    def test_cooperative_is_excluded(self):
+        job = JobListing(source="test", url="https://example.test/cooperative", title="Fisioterapista", text="Ricerca fisioterapista per struttura riabilitativa", company="Cooperativa Sociale Example", cooperative=True)
+        result = evaluate_filters(job, self.config["filters"])
+        self.assertFalse(result.included)
+        self.assertIn("cooperative", result.exclusion_rules)
+
     def test_non_rome_province_is_excluded(self):
         job = JobListing(source="test", url="https://example.test/latina", title="Fisioterapista", text="Offerta di lavoro", location="Latina", province="LT")
         result = evaluate_filters(job, self.config["filters"])
