@@ -30,6 +30,9 @@ def evaluate_filters(job: JobListing, config: dict) -> FilterResult:
     if config.get("exclude_homecare_only", False) and job.homecare_only:
         matched_rules.append("homecare_only")
 
+    if config.get("exclude_cooperatives", False) and job.cooperative:
+        matched_rules.append("cooperative")
+
     allowed_provinces = {str(value).upper() for value in config.get("allowed_provinces", [])}
     if allowed_provinces and job.province and job.province.upper() not in allowed_provinces:
         matched_rules.append("province_not_allowed")
