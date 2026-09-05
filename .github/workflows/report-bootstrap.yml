@@ -1,0 +1,43 @@
+name: Build HTML Report
+
+on:
+  push:
+    branches:
+      - v2-core
+    paths:
+      - state/report-trigger.txt
+
+permissions:
+  contents: write
+
+jobs:
+  build-report:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: v2-core
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Build report from existing baseline
+        run: |
+          mkdir -p logs
+          if [ ! -f logs/new_jobs.json ]; then echo '[]' > logs/new_jobs.json; fi
+          python tools/generate_report.py
+
+      - name: Persist report
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/latest.html
+          if git diff --cached --quiet; then
+            echo "No report changes"
+            exit 0
+          fi
+          git commit -m "[report] Build initial HTML report"
+          git push origin HEAD:v2-core
