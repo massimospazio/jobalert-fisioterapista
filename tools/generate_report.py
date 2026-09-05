@@ -4,6 +4,8 @@ from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 
+from core.zenrows_usage import forecast, load_state
+
 BASELINE = Path("data/baseline_jobs.json")
 NEW_JOBS = Path("logs/new_jobs.json")
 DOCS = Path("docs")
@@ -46,15 +48,9 @@ def _job_row(job: dict, is_new: bool) -> str:
         title = f'<a href="{html.escape(url, quote=True)}" target="_blank" rel="noopener">{title}</a>'
     opening = "<tr class='new'>" if is_new else "<tr>"
     return opening + "".join([
-        f"<td>{_cell(score)}</td>",
-        f"<td>{'' if distance is None else f'{distance:.1f} km'}</td>",
-        f"<td>{_cell(job.get('location'))}</td>",
-        f"<td>{_cell(job.get('company'))}</td>",
-        f"<td>{title}</td>",
-        f"<td>{_cell(job.get('contract_type'))}</td>",
-        f"<td>{_cell(job.get('published_at'))}</td>",
-        f"<td>{_cell(job.get('source'))}</td>",
-        "</tr>",
+        f"<td>{_cell(score)}</td>", f"<td>{'' if distance is None else f'{distance:.1f} km'}</td>",
+        f"<td>{_cell(job.get('location'))}</td>", f"<td>{_cell(job.get('company'))}</td>", f"<td>{title}</td>",
+        f"<td>{_cell(job.get('contract_type'))}</td>", f"<td>{_cell(job.get('published_at'))}</td>", f"<td>{_cell(job.get('source'))}</td>", "</tr>",
     ])
 
 
@@ -70,15 +66,12 @@ def main() -> None:
             for rule in (record.get("filter") or {}).get("exclusion_rules") or []:
                 exclusions[rule] += 1
     source_counts = Counter((r.get("job") or {}).get("source") for r in audit)
+    zenrows = forecast(load_state(), credits_per_run=50)
     summary = {
-        "generated_at_utc": datetime.now(timezone.utc).isoformat(),
-        "raw_audit_records": len(audit),
-        "included": decisions.get("INCLUDED", 0),
-        "excluded": decisions.get("EXCLUDED", 0),
-        "new": len(new_jobs),
-        "baseline_count": len(baseline),
-        "source_counts": dict(source_counts),
-        "exclusion_rules": dict(exclusions),
+        "generated_at_utc": datetime.now(timezone.utc).isoformat(), "raw_audit_records": len(audit),
+        "included": decisions.get("INCLUDED", 0), "excluded": decisions.get("EXCLUDED", 0), "new": len(new_jobs),
+        "baseline_count": len(baseline), "source_counts": dict(source_counts), "exclusion_rules": dict(exclusions),
+        "zenrows": zenrows,
     }
     SUMMARY_JSON.parent.mkdir(parents=True, exist_ok=True)
     SUMMARY_JSON.write_text(json.dumps(summary, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -87,28 +80,20 @@ def main() -> None:
     source_text = " · ".join(f"{_cell(k)}: {v}" for k, v in sorted(source_counts.items())) or "n/d"
     exclusion_text = " · ".join(f"{_cell(k)}: {v}" for k, v in sorted(exclusions.items())) or "nessuna"
     generated = datetime.now().astimezone().strftime("%d/%m/%Y %H:%M")
-    page = f"""<!doctype html>
-<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Job Alert Fisioterapista</title>
-<style>
-body{{font-family:system-ui,-apple-system,sans-serif;margin:24px;background:#f6f7f9;color:#1f2937}} .wrap{{max-width:1400px;margin:auto}}
-.cards{{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:18px 0}} .card{{background:white;padding:16px;border-radius:12px;box-shadow:0 1px 4px #0001}}
-.big{{font-size:28px;font-weight:700}} table{{width:100%;border-collapse:collapse;background:white}} th,td{{padding:10px;border-bottom:1px solid #e5e7eb;text-align:left}} th{{position:sticky;top:0;background:#111827;color:white}} tr.new{{background:#ecfdf5}} a{{color:#0369a1}} .meta{{color:#6b7280}} .box{{background:white;padding:14px;border-radius:10px;margin:12px 0;overflow:auto}}
-</style></head><body><div class="wrap">
+    zrisk = {"SAFE":"🟢 SAFE","WARNING":"🟠 ATTENZIONE","RISK":"🔴 RISCHIO"}.get(zenrows["risk"], zenrows["risk"])
+    recommendation = "giornaliera" if zenrows["recommended_every_days"] == 1 else f"ogni {zenrows['recommended_every_days']} giorni"
+    page = f"""<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Job Alert Fisioterapista</title>
+<style>body{{font-family:system-ui,-apple-system,sans-serif;margin:24px;background:#f6f7f9;color:#1f2937}} .wrap{{max-width:1400px;margin:auto}} .cards{{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:18px 0}} .card,.box{{background:white;padding:16px;border-radius:12px;box-shadow:0 1px 4px #0001}} .big{{font-size:28px;font-weight:700}} table{{width:100%;border-collapse:collapse;background:white}} th,td{{padding:10px;border-bottom:1px solid #e5e7eb;text-align:left}} th{{position:sticky;top:0;background:#111827;color:white}} tr.new{{background:#ecfdf5}} a{{color:#0369a1}} .meta{{color:#6b7280}} .box{{margin:12px 0;overflow:auto}}</style></head><body><div class="wrap">
 <h1>Job Alert Fisioterapista</h1><div class="meta">Ultimo aggiornamento: {generated}</div>
-<div class="cards">
-<div class="card"><div class="big">{len(baseline)}</div>offerte incluse</div>
-<div class="card"><div class="big">{len(new_jobs)}</div>nuove</div>
-<div class="card"><div class="big">{decisions.get('EXCLUDED',0)}</div>escluse</div>
-<div class="card"><div class="big">{len(audit)}</div>record elaborati</div>
-</div>
+<div class="cards"><div class="card"><div class="big">{len(baseline)}</div>offerte incluse</div><div class="card"><div class="big">{len(new_jobs)}</div>nuove</div><div class="card"><div class="big">{decisions.get('EXCLUDED',0)}</div>escluse</div><div class="card"><div class="big">{len(audit)}</div>record elaborati</div></div>
+<div class="box"><strong>ZenRows:</strong> {zrisk}<br>Usati: {zenrows['consumed']}/{zenrows['monthly_limit']} · residui: {zenrows['remaining']}<br>Stima fine mese con frequenza giornaliera: {zenrows['projected_consumed']}/{zenrows['monthly_limit']} ({zenrows['projected_pct']}%) · residui stimati: {zenrows['projected_remaining']}<br>Frequenza consigliata: {recommendation}</div>
 <div class="box"><strong>Fonti:</strong> {source_text}<br><strong>Esclusioni:</strong> {exclusion_text}</div>
 <div class="box"><strong>Legenda:</strong> righe verdi = nuove offerte nell'ultimo run.</div>
 <div style="overflow:auto"><table><thead><tr><th>Score</th><th>Distanza</th><th>Località</th><th>Azienda</th><th>Offerta</th><th>Contratto</th><th>Pubblicata</th><th>Fonte</th></tr></thead><tbody>{rows}</tbody></table></div>
 </div></body></html>"""
     DOCS.mkdir(parents=True, exist_ok=True)
     LATEST_HTML.write_text(page, encoding="utf-8")
-    print(f"REPORT_HTML path={LATEST_HTML} jobs={len(baseline)} new={len(new_jobs)}")
+    print(f"REPORT_HTML path={LATEST_HTML} jobs={len(baseline)} new={len(new_jobs)} zenrows_risk={zenrows['risk']} projected={zenrows['projected_consumed']}/{zenrows['monthly_limit']}")
 
 
 if __name__ == "__main__":
