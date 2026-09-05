@@ -41,13 +41,16 @@ def main() -> None:
     status = os.environ.get("JOB_STATUS", "success").lower()
     summary = _load(SUMMARY, {})
     new_jobs = _load(NEW_JOBS, [])
+    health = summary.get("health") or {}
     repo = os.environ.get("GITHUB_REPOSITORY", "massimospazio/jobalert-fisioterapista")
     run_id = os.environ.get("GITHUB_RUN_ID", "")
     server = os.environ.get("GITHUB_SERVER_URL", "https://github.com")
     actions_url = f"{server}/{repo}/actions/runs/{run_id}" if run_id else f"{server}/{repo}/actions"
     report_url = os.environ.get("REPORT_URL", "").strip()
 
-    if status == "success":
+    if status == "success" and health.get("status") == "DEGRADED":
+        icon, label = "🟠", "DEGRADED"
+    elif status == "success":
         icon, label = "🟢", "OK"
     elif status == "cancelled":
         icon, label = "🟠", "CANCELLED"
@@ -60,12 +63,21 @@ def main() -> None:
         sources = summary.get("source_counts") or {}
         if sources:
             lines.append("Fonti: " + " · ".join(f"{k} {v}" for k, v in sorted(sources.items())))
+
+        issues = list(health.get("warnings") or [])
+        issues += [f"{e.get('source')}: {e.get('message')}" for e in health.get("source_errors") or []]
+        if issues:
+            lines += ["", "⚠️ Diagnostica:"] + [f"• {item}" for item in issues[:4]]
+
         zr = summary.get("zenrows") or {}
         if zr:
             risk_icon = {"SAFE": "🟢", "WARNING": "🟠", "RISK": "🔴"}.get(zr.get("risk"), "⚪")
+            run_sources = health.get("zenrows_by_source") or {}
+            if run_sources:
+                detail = " + ".join(f"{name} {item.get('credits', 0)}" for name, item in run_sources.items())
+                lines.append(f"\nZenRows run: {detail} = {health.get('zenrows_run_credits', 0)} crediti")
             lines += [
-                "",
-                f"{risk_icon} ZenRows: {zr.get('consumed', 0)}/{zr.get('monthly_limit', 5000)} usati · {zr.get('remaining', 0)} residui",
+                f"{risk_icon} ZenRows mese: {zr.get('consumed', 0)}/{zr.get('monthly_limit', 5000)} usati · {zr.get('remaining', 0)} residui",
                 f"Stima fine mese: {zr.get('projected_consumed', 0)}/{zr.get('monthly_limit', 5000)} ({zr.get('projected_pct', 0)}%)",
             ]
             every = int(zr.get("recommended_every_days") or 1)
@@ -87,7 +99,7 @@ def main() -> None:
 
     response = requests.post(f"https://api.telegram.org/bot{token}/sendMessage", json={"chat_id": chat_id, "text": "\n".join(lines), "disable_web_page_preview": True}, timeout=30)
     response.raise_for_status()
-    print(f"TELEGRAM_SENT status={status} new_jobs={len(new_jobs)}")
+    print(f"TELEGRAM_SENT status={label} new_jobs={len(new_jobs)}")
 
 
 if __name__ == "__main__":
