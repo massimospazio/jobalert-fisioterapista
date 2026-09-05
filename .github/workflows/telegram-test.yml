@@ -1,0 +1,64 @@
+name: Telegram Test
+
+on:
+  workflow_dispatch:
+
+jobs:
+  telegram-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: v2-core
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install requests
+        run: pip install requests
+
+      - name: Prepare synthetic test data
+        run: |
+          mkdir -p logs
+          cat > logs/run_summary.json <<'JSON'
+          {
+            "raw_audit_records": 12,
+            "included": 7,
+            "excluded": 5,
+            "new": 2,
+            "source_counts": {
+              "Bakeca": 4,
+              "LinkedIn": 5,
+              "OFI Lazio": 3
+            }
+          }
+          JSON
+          cat > logs/new_jobs.json <<'JSON'
+          [
+            {
+              "title": "Fisioterapista",
+              "company": "TEST - Centro Riabilitazione",
+              "location": "Marino",
+              "score": 95,
+              "distance_km": 4.2
+            },
+            {
+              "title": "Fisioterapista",
+              "company": "TEST - Studio Fisioterapico",
+              "location": "Grottaferrata",
+              "score": 88,
+              "distance_km": 6.2
+            }
+          ]
+          JSON
+
+      - name: Send Telegram test
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          JOB_STATUS: success
+          REPORT_URL: https://massimospazio.github.io/jobalert-fisioterapista/latest.html
+        run: python tools/notify_telegram.py
