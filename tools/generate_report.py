@@ -1,8 +1,13 @@
 import html
 import json
+import sys
 from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 from core.zenrows_usage import forecast, load_state
 
