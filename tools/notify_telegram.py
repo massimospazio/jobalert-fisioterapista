@@ -32,6 +32,14 @@ def _short_job(job: dict) -> str:
     return " | ".join(bits)
 
 
+def _impact_label(pct: float) -> str:
+    if pct <= 10:
+        return "BASSO"
+    if pct <= 35:
+        return "MEDIO"
+    return "ALTO"
+
+
 def main() -> None:
     token = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
     chat_id = os.environ.get("TELEGRAM_CHAT_ID", "").strip()
@@ -64,6 +72,17 @@ def main() -> None:
         sources = summary.get("source_counts") or {}
         if sources:
             lines.append("Fonti: " + " · ".join(f"{k} {v}" for k, v in sorted(sources.items())))
+
+    linkedin = health.get("linkedin") or {}
+    impacted = int(linkedin.get("detail_impacted") or 0)
+    new_linkedin = int(linkedin.get("new_opportunities") or 0)
+    impact_pct = float(linkedin.get("impact_pct") or 0)
+    if impacted:
+        lines += [
+            "",
+            f"LinkedIn DEGRADED: {impacted}/{new_linkedin} nuove opportunità senza dettaglio ({impact_pct:.1f}%) · impatto {_impact_label(impact_pct)}",
+            "Dati base (titolo, azienda, località, data) comunque disponibili.",
+        ]
 
     issues = list(health.get("warnings") or [])
     issues += [f"{e.get('source')}: {e.get('message')}" for e in health.get("source_errors") or []]
