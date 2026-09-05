@@ -1,5 +1,10 @@
 import json
+import sys
 from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 import yaml
 
@@ -7,9 +12,6 @@ from core.dedup import opportunity_key
 from core.filters import evaluate_filters
 from core.normalizer import enrich_job
 from sources import indeed
-
-
-ROOT = Path(__file__).resolve().parents[1]
 
 
 def load_yaml(path: str):
