@@ -6,6 +6,7 @@ import requests
 from bs4 import BeautifulSoup
 
 from core.models import JobListing
+from core.zenrows_usage import record_success
 
 
 ZENROWS_ENDPOINT = "https://api.zenrows.com/v1/"
@@ -162,6 +163,7 @@ def collect(source_config: dict, locations: dict) -> list[JobListing]:
     print(
         "ZENROWS_USAGE "
         f"request_cost={response.headers.get('X-Request-Cost', 'n/a')} "
+        f"credits=25 "
         f"concurrency_limit={response.headers.get('Concurrency-Limit', 'n/a')} "
         f"concurrency_remaining={response.headers.get('Concurrency-Remaining', 'n/a')} "
         f"request_id={response.headers.get('X-Request-Id', 'n/a')}"
@@ -169,6 +171,14 @@ def collect(source_config: dict, locations: dict) -> list[JobListing]:
 
     if response.status_code >= 400:
         raise RuntimeError(f"ZenRows Bakeca HTTP {response.status_code}")
+
+    record_success(
+        "Bakeca",
+        credits=25,
+        request_cost=response.headers.get("X-Request-Cost"),
+        request_id=response.headers.get("X-Request-Id"),
+    )
+
     if not cards:
         raise RuntimeError(f"ZENROWS_INCOMPLETE_RENDER Bakeca bytes={len(response.content)}")
 
