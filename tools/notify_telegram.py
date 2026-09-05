@@ -5,6 +5,7 @@ from pathlib import Path
 import requests
 
 SUMMARY = Path("logs/run_summary.json")
+RUN_HEALTH = Path("logs/run_health.json")
 NEW_JOBS = Path("logs/new_jobs.json")
 
 
@@ -41,7 +42,7 @@ def main() -> None:
     status = os.environ.get("JOB_STATUS", "success").lower()
     summary = _load(SUMMARY, {})
     new_jobs = _load(NEW_JOBS, [])
-    health = summary.get("health") or {}
+    health = summary.get("health") or _load(RUN_HEALTH, {})
     repo = os.environ.get("GITHUB_REPOSITORY", "massimospazio/jobalert-fisioterapista")
     run_id = os.environ.get("GITHUB_RUN_ID", "")
     server = os.environ.get("GITHUB_SERVER_URL", "https://github.com")
@@ -64,27 +65,27 @@ def main() -> None:
         if sources:
             lines.append("Fonti: " + " · ".join(f"{k} {v}" for k, v in sorted(sources.items())))
 
-        issues = list(health.get("warnings") or [])
-        issues += [f"{e.get('source')}: {e.get('message')}" for e in health.get("source_errors") or []]
-        if issues:
-            lines += ["", "⚠️ Diagnostica:"] + [f"• {item}" for item in issues[:4]]
+    issues = list(health.get("warnings") or [])
+    issues += [f"{e.get('source')}: {e.get('message')}" for e in health.get("source_errors") or []]
+    if issues:
+        lines += ["", "⚠️ Diagnostica:"] + [f"• {item}" for item in issues[:4]]
 
-        zr = summary.get("zenrows") or {}
-        if zr:
-            risk_icon = {"SAFE": "🟢", "WARNING": "🟠", "RISK": "🔴"}.get(zr.get("risk"), "⚪")
-            run_sources = health.get("zenrows_by_source") or {}
-            if run_sources:
-                detail = " + ".join(f"{name} {item.get('credits', 0)}" for name, item in run_sources.items())
-                lines.append(f"\nZenRows run: {detail} = {health.get('zenrows_run_credits', 0)} crediti")
-            lines += [
-                f"{risk_icon} ZenRows mese: {zr.get('consumed', 0)}/{zr.get('monthly_limit', 5000)} usati · {zr.get('remaining', 0)} residui",
-                f"Stima fine mese: {zr.get('projected_consumed', 0)}/{zr.get('monthly_limit', 5000)} ({zr.get('projected_pct', 0)}%)",
-            ]
-            every = int(zr.get("recommended_every_days") or 1)
-            if every > 1:
-                lines.append(f"⚠️ Frequenza consigliata: ogni {every} giorni")
-            else:
-                lines.append("Frequenza giornaliera sostenibile")
+    zr = summary.get("zenrows") or {}
+    run_sources = health.get("zenrows_by_source") or {}
+    if run_sources:
+        detail = " + ".join(f"{name} {item.get('credits', 0)}" for name, item in run_sources.items())
+        lines.append(f"\nZenRows run: {detail} = {health.get('zenrows_run_credits', 0)} crediti")
+    if zr:
+        risk_icon = {"SAFE": "🟢", "WARNING": "🟠", "RISK": "🔴"}.get(zr.get("risk"), "⚪")
+        lines += [
+            f"{risk_icon} ZenRows mese: {zr.get('consumed', 0)}/{zr.get('monthly_limit', 5000)} usati · {zr.get('remaining', 0)} residui",
+            f"Stima fine mese: {zr.get('projected_consumed', 0)}/{zr.get('monthly_limit', 5000)} ({zr.get('projected_pct', 0)}%)",
+        ]
+        every = int(zr.get("recommended_every_days") or 1)
+        if every > 1:
+            lines.append(f"⚠️ Frequenza consigliata: ogni {every} giorni")
+        else:
+            lines.append("Frequenza giornaliera sostenibile")
 
     if new_jobs:
         lines += ["", "Nuove opportunità:"]
