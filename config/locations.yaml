@@ -17,3 +17,13 @@ locations:
   nettuno: {latitude: 41.45794, longitude: 12.66393}
   pomezia: {latitude: 41.66931, longitude: 12.50124}
   viterbo: {latitude: 42.41937, longitude: 12.10560}
+  ciampino: {latitude: 41.80064, longitude: 12.60158}
+  genzano di roma: {latitude: 41.70724, longitude: 12.68964}
+  lariano: {latitude: 41.71847, longitude: 12.82868}
+  castel gandolfo: {latitude: 41.74745, longitude: 12.65039}
+  rocca di papa: {latitude: 41.76155, longitude: 12.70995}
+  monte porzio catone: {latitude: 41.81573, longitude: 12.71431}
+  monte compatri: {latitude: 41.80846, longitude: 12.73779}
+  palestrina: {latitude: 41.83800, longitude: 12.88600}
+  valmontone: {latitude: 41.77301, longitude: 12.91843}
+  ardea: {latitude: 41.60738, longitude: 12.54177}
