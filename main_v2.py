@@ -23,30 +23,10 @@ BASELINE_JSON_PATH = "data/baseline_jobs.json"
 BASELINE_CSV_PATH = "data/baseline_jobs.csv"
 
 BASELINE_COLUMNS = [
-    "source",
-    "title",
-    "company",
-    "location",
-    "province",
-    "homecare",
-    "homecare_only",
-    "published_at",
-    "application_deadline",
-    "contract_type",
-    "employment_type",
-    "cooperative",
-    "salary",
-    "piva_required",
-    "adi",
-    "salary_present",
-    "latitude",
-    "longitude",
-    "url",
-    "score",
-    "distance_km",
-    "opportunity_id",
-    "job_id",
-    "raw_text",
+    "source", "title", "company", "location", "province", "homecare", "homecare_only",
+    "published_at", "application_deadline", "contract_type", "employment_type", "cooperative",
+    "salary", "piva_required", "adi", "salary_present", "latitude", "longitude", "url", "score",
+    "distance_km", "opportunity_id", "job_id", "raw_text",
 ]
 
 
@@ -54,7 +34,7 @@ def _truthy_env(name: str) -> bool:
     return os.environ.get(name, "").lower() in {"1", "true", "yes"}
 
 
-def _collect_source(source: dict, locations: dict):
+def _collect_source(source: dict, locations: dict, known_opportunities: set[str]):
     source_id = source.get("id")
     if source_id == "bakeca":
         if not _truthy_env("ALLOW_PAID_SOURCES"):
@@ -64,7 +44,7 @@ def _collect_source(source: dict, locations: dict):
     if source_id == "ofi_lazio":
         return collect_ofi_lazio(source, locations)
     if source_id == "linkedin":
-        return collect_linkedin(source, locations)
+        return collect_linkedin(source, locations, known_opportunities=known_opportunities)
     print(f"Fonte non ancora implementata: {source_id}")
     return []
 
@@ -134,17 +114,14 @@ def main() -> None:
     known_opportunities = set(baseline_state.get("opportunities", {}).keys())
 
     source_configs = config["sources"].get("sources", [])
-    sources = [
-        source for source in source_configs
-        if source.get("enabled") and source.get("id") != "indeed"
-    ]
+    sources = [source for source in source_configs if source.get("enabled") and source.get("id") != "indeed"]
     all_jobs = []
 
     for source in sources:
         source_id = source.get("id")
         print(f"\nRACCOLTA FONTE: {source.get('name', source_id)}")
         try:
-            jobs = _collect_source(source, locations)
+            jobs = _collect_source(source, locations, known_opportunities)
             jobs = [enrich_job(job, locations) for job in jobs]
             print(f"Annunci raccolti: {len(jobs)}")
             all_jobs.extend(jobs)
@@ -152,10 +129,7 @@ def main() -> None:
             print(f"SOURCE_ERROR {source_id}: {exc}")
 
     primary_unique, primary_duplicates = deduplicate_jobs(all_jobs)
-    print(
-        f"\nPRIMARY_DEDUP raw={len(all_jobs)} unique_opportunities={len(primary_unique)} "
-        f"duplicates_removed={primary_duplicates}"
-    )
+    print(f"\nPRIMARY_DEDUP raw={len(all_jobs)} unique_opportunities={len(primary_unique)} duplicates_removed={primary_duplicates}")
 
     indeed_config = next((source for source in source_configs if source.get("id") == "indeed"), None)
     if _truthy_env("ENABLE_INDEED_GAPFILL"):
@@ -169,10 +143,7 @@ def main() -> None:
                 indeed_jobs, usage = collect_indeed(indeed_config, locations)
                 indeed_jobs = [enrich_job(job, locations) for job in indeed_jobs]
                 all_jobs.extend(indeed_jobs)
-                print(
-                    f"INDEED_GAPFILL primary_unique={len(primary_unique)} collected={len(indeed_jobs)} "
-                    f"request_cost={usage.get('request_cost', 'n/a')}"
-                )
+                print(f"INDEED_GAPFILL primary_unique={len(primary_unique)} collected={len(indeed_jobs)} request_cost={usage.get('request_cost', 'n/a')}")
             except Exception as exc:
                 print(f"SOURCE_ERROR indeed: {exc}")
     else:
@@ -180,16 +151,10 @@ def main() -> None:
 
     unique_jobs, duplicate_count = deduplicate_jobs(all_jobs)
     incremental_after_indeed = max(0, len(unique_jobs) - len(primary_unique))
-    print(
-        f"\nDEDUP raw={len(all_jobs)} unique_opportunities={len(unique_jobs)} "
-        f"duplicates_removed={duplicate_count} indeed_incremental={incremental_after_indeed}"
-    )
+    print(f"\nDEDUP raw={len(all_jobs)} unique_opportunities={len(unique_jobs)} duplicates_removed={duplicate_count} indeed_incremental={incremental_after_indeed}")
     _print_coverage(unique_jobs)
 
-    included = 0
-    excluded = 0
-    new_included = 0
-    known_included = 0
+    included = excluded = new_included = known_included = 0
     audit_file = None
     included_jobs = []
     included_opportunity_ids = []
@@ -201,7 +166,6 @@ def main() -> None:
         score_result = score_job(job, scoring_config, settings) if filter_result.included else None
         included += int(filter_result.included)
         excluded += int(not filter_result.included)
-
         job_dict = asdict(job)
         job_id = stable_job_id(job_dict)
         opp_id = opportunity_key(job)
@@ -216,7 +180,6 @@ def main() -> None:
                 new_jobs_output.append(payload)
             else:
                 known_included += 1
-
         print(f"STATO: {state_status} | JOB_ID: {job_id} | OPPORTUNITY_ID: {opp_id}")
         print(format_console_audit(job, filter_result, score_result))
         audit_file = write_audit(job, filter_result, score_result, output_dir)
@@ -238,11 +201,7 @@ def main() -> None:
         save_state_dict(updated_state, STATE_PATH)
 
     print("\n" + "=" * 72)
-    print(
-        f"RACCOLTI RAW: {len(all_jobs)} | OPPORTUNITA UNICHE: {len(unique_jobs)} | "
-        f"DUPLICATI: {duplicate_count} | INCLUSI: {included} | ESCLUSI: {excluded} | "
-        f"NUOVI INCLUSI: {new_included} | GIA NOTI: {known_included}"
-    )
+    print(f"RACCOLTI RAW: {len(all_jobs)} | OPPORTUNITA UNICHE: {len(unique_jobs)} | DUPLICATI: {duplicate_count} | INCLUSI: {included} | ESCLUSI: {excluded} | NUOVI INCLUSI: {new_included} | GIA NOTI: {known_included}")
     if audit_file:
         print(f"Audit JSONL: {audit_file}")
     print(f"Nuovi annunci JSON: {new_jobs_file}")
