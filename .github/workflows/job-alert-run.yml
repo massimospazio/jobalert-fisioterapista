@@ -34,6 +34,7 @@ jobs:
         id: agent
         env:
           ALLOW_PAID_SOURCES: "true"
+          ENABLE_INDEED_GAPFILL: "true"
           PERSIST_BASELINE_DATA: "true"
           ZENROWS_KEY: ${{ secrets.ZENROWS_KEY }}
         run: python main_v2.py
