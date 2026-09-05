@@ -44,7 +44,8 @@ def _job_row(job: dict, is_new: bool) -> str:
     title = _cell(job.get("title") or "Fisioterapista")
     if url:
         title = f'<a href="{html.escape(url, quote=True)}" target="_blank" rel="noopener">{title}</a>'
-    return "<tr class='new'>" if is_new else "<tr>" + "".join([
+    opening = "<tr class='new'>" if is_new else "<tr>"
+    return opening + "".join([
         f"<td>{_cell(score)}</td>",
         f"<td>{'' if distance is None else f'{distance:.1f} km'}</td>",
         f"<td>{_cell(job.get('location'))}</td>",
