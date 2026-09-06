@@ -1,9 +1,7 @@
-name: Job Scraper & Alert System
+name: Job Scraper & Alert System (Legacy Manual)
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '0 8 * * *'
 
 jobs:
   run-scraper:
