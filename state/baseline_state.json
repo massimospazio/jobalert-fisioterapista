@@ -255,6 +255,51 @@
       "location": "00047 Marino",
       "province": "RM",
       "published_at": null
+    },
+    "66d101c1cdb5b2b4a6fb313a": {
+      "source": "LinkedIn",
+      "url": "https://it.linkedin.com/jobs/view/fisioterapista-domiciliare-asl-rm-2-distretto-8-9-at-sol-group-4458626435",
+      "title": "FISIOTERAPISTA DOMICILIARE ASL RM 2 - Distretto 8 - 9",
+      "company": "SOL Group",
+      "location": "Roma",
+      "province": "RM",
+      "published_at": "2026-08-27"
+    },
+    "ac71db6febcfc7e349baf87f": {
+      "source": "Indeed",
+      "url": "https://it.indeed.com/viewjob?jk=6c945c704e14c069",
+      "title": "FISIOTERAPISTA - M/F",
+      "company": "Clariane",
+      "location": "Terracina, Lazio",
+      "province": "",
+      "published_at": null
+    },
+    "5ece5fc5a1191907cfb826da": {
+      "source": "Indeed",
+      "url": "https://it.indeed.com/viewjob?jk=9de6bf6e6008b12d",
+      "title": "Massaggiatore/massofisioterapista",
+      "company": "MT Studio",
+      "location": "00012 Guidonia",
+      "province": "",
+      "published_at": null
+    },
+    "6af61bf8940fad92163dd1be": {
+      "source": "Indeed",
+      "url": "https://it.indeed.com/viewjob?jk=6e298cf22b5837a7",
+      "title": "Fisioterapista",
+      "company": "Osteoequipe - Osteopatia e Fisioterapia ad Ostia",
+      "location": "Lido di Ostia, Lazio",
+      "province": "",
+      "published_at": null
+    },
+    "2b6c51c4dd241699d2b032dd": {
+      "source": "Indeed",
+      "url": "https://it.indeed.com/viewjob?jk=1aadd73621379668",
+      "title": "Fisioterapista",
+      "company": "FISAL SRL",
+      "location": "00182 Roma",
+      "province": "RM",
+      "published_at": null
     }
   },
   "opportunities": {
@@ -287,6 +332,10 @@
     "8a7895e82c433d76448b9be4": {},
     "b6df84edda7314452eabf9d1": {},
     "9623c3f84e34cbdc67428268": {},
-    "f4b7a1688af62d1693af3785": {}
+    "f4b7a1688af62d1693af3785": {},
+    "62f8471e1b9cddd9b832b829": {},
+    "4e7c3e283156da6f9b9ab6de": {},
+    "205fdcaf196e52f4f7d96294": {},
+    "63cc173640c5c12420fe85a1": {}
   }
 }
