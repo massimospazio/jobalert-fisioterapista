@@ -1,5 +1,6 @@
 import json
 import os
+from collections import Counter
 from pathlib import Path
 
 import requests
@@ -68,10 +69,13 @@ def main() -> None:
 
     lines = [f"{icon} Job Alert Fisioterapista — {label}"]
     if summary:
-        lines += ["", f"Elaborati: {summary.get('raw_audit_records', 0)}", f"Inclusi: {summary.get('included', 0)}", f"Esclusi: {summary.get('excluded', 0)}", f"Nuovi: {summary.get('new', len(new_jobs))}"]
+        lines += ["", f"Elaborati: {summary.get('raw_audit_records', 0)}", f"Inclusi: {summary.get('included', 0)}", f"Esclusi: {summary.get('excluded', 0)}", f"Nuovi notificati: {summary.get('new', len(new_jobs))}"]
         sources = summary.get("source_counts") or {}
         if sources:
-            lines.append("Fonti: " + " · ".join(f"{k} {v}" for k, v in sorted(sources.items())))
+            lines.append("Fonti elaborate: " + " · ".join(f"{k} {v}" for k, v in sorted(sources.items())))
+        if new_jobs:
+            new_by_source = Counter((job.get("source") or "sconosciuta") for job in new_jobs)
+            lines.append("Nuovi per fonte: " + " · ".join(f"{name} {count}" for name, count in sorted(new_by_source.items())))
 
     linkedin = health.get("linkedin") or {}
     impacted = int(linkedin.get("detail_impacted") or 0)
@@ -80,8 +84,9 @@ def main() -> None:
     if impacted:
         lines += [
             "",
-            f"LinkedIn DEGRADED: {impacted}/{new_linkedin} nuove opportunità senza dettaglio ({impact_pct:.1f}%) · impatto {_impact_label(impact_pct)}",
-            "Dati base (titolo, azienda, località, data) comunque disponibili.",
+            f"LinkedIn — arricchimento DEGRADED: {impacted}/{new_linkedin} opportunità nuove nella ricerca senza pagina di dettaglio ({impact_pct:.1f}%) · impatto {_impact_label(impact_pct)}",
+            "Questa misura riguarda solo i dettagli LinkedIn e NON coincide con il numero di nuovi annunci notificati.",
+            "Titolo, azienda, località e data dalla card restano disponibili; i filtri vengono comunque applicati.",
         ]
 
     issues = list(health.get("warnings") or [])
@@ -107,7 +112,7 @@ def main() -> None:
             lines.append("Frequenza giornaliera sostenibile")
 
     if new_jobs:
-        lines += ["", "Nuove opportunità:"]
+        lines += ["", "Nuove opportunità notificate:"]
         for job in new_jobs[:5]:
             lines.append(_short_job(job))
         if len(new_jobs) > 5:
