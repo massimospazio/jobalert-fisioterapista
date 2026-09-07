@@ -14,6 +14,8 @@ PROVINCE_BY_PLACE = {
     "cori": "LT", "frosinone": "FR", "rieti": "RI", "ciampino": "RM", "lariano": "RM",
     "castel gandolfo": "RM", "rocca di papa": "RM", "monte porzio catone": "RM",
     "monte compatri": "RM", "palestrina": "RM", "valmontone": "RM", "ardea": "RM",
+    "terracina": "LT", "guidonia": "RM", "guidonia montecelio": "RM",
+    "lido di ostia": "RM", "ostia": "RM",
 }
 
 
@@ -104,7 +106,7 @@ def extract_location(text: str, title: str = "") -> tuple[str, str]:
 
 
 def enrich_job(job: JobListing, locations: dict) -> JobListing:
-    combined = clean(f"{job.title} {job.company} {job.text}")
+    combined = clean(f"{job.title} {job.company} {job.location} {job.text}")
     contract = job.contract_type if job.contract_type != "non_specificato" else extract_contract(combined)
     salary = job.salary or extract_salary(combined)
     deadline = job.application_deadline or extract_deadline(combined)
@@ -112,7 +114,7 @@ def enrich_job(job: JobListing, locations: dict) -> JobListing:
     location = job.location
     province = job.province
     if not location or not province:
-        parsed_location, parsed_province = extract_location(job.text, job.title)
+        parsed_location, parsed_province = extract_location(f"{job.location} {job.text}", job.title)
         location = location or parsed_location
         province = province or parsed_province
 
