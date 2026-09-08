@@ -24,6 +24,8 @@ class JobListing:
     cooperative: bool = False
     salary: str = ""
     salary_present: bool = False
+    detail_status: str = "not_applicable"
+    detail_access_issue: bool = False
 
 
 @dataclass
