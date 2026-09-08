@@ -25,8 +25,8 @@ BASELINE_CSV_PATH = "data/baseline_jobs.csv"
 BASELINE_COLUMNS = [
     "source", "title", "company", "location", "province", "homecare", "homecare_only",
     "published_at", "application_deadline", "contract_type", "employment_type", "cooperative",
-    "salary", "piva_required", "adi", "salary_present", "latitude", "longitude", "url", "score",
-    "distance_km", "opportunity_id", "job_id", "raw_text",
+    "salary", "piva_required", "adi", "salary_present", "detail_status", "detail_access_issue",
+    "latitude", "longitude", "url", "score", "distance_km", "opportunity_id", "job_id", "raw_text",
 ]
 
 
