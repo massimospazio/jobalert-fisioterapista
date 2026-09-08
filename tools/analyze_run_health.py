@@ -20,6 +20,19 @@ def _int(value, default=0):
         return default
 
 
+def _latest_audit() -> list[dict]:
+    files = sorted(Path("logs").glob("audit-*.jsonl"))
+    if not files:
+        return []
+    records = []
+    for line in files[-1].read_text(encoding="utf-8", errors="replace").splitlines():
+        try:
+            records.append(json.loads(line))
+        except Exception:
+            pass
+    return records
+
+
 def main() -> None:
     text = RUN_LOG.read_text(encoding="utf-8", errors="replace") if RUN_LOG.exists() else ""
     warnings = []
@@ -42,6 +55,9 @@ def main() -> None:
         "unattempted_after_block": 0,
         "detail_impacted": 0,
         "impact_pct": 0.0,
+        "final_included": 0,
+        "final_included_impacted": 0,
+        "final_impact_pct": 0.0,
         "search_available": bool(re.search(r"LINKEDIN_COLLECT\s+status=200", text)),
     }
 
@@ -61,11 +77,23 @@ def main() -> None:
             linkedin[key] = _int(value)
         linkedin["impact_pct"] = _float(summary_match.group(10)) or 0.0
 
+    audit = _latest_audit()
+    included_linkedin = [
+        r for r in audit
+        if r.get("decision") == "INCLUDED" and (r.get("job") or {}).get("source") == "LinkedIn"
+    ]
+    impacted_included = [r for r in included_linkedin if (r.get("job") or {}).get("detail_access_issue")]
+    linkedin["final_included"] = len(included_linkedin)
+    linkedin["final_included_impacted"] = len(impacted_included)
+    linkedin["final_impact_pct"] = round(
+        len(impacted_included) / len(included_linkedin) * 100, 1
+    ) if included_linkedin else 0.0
+
     if linkedin["detail_impacted"]:
         warnings.append(
-            "LinkedIn: dati base disponibili, ma dettaglio non arricchito per "
-            f"{linkedin['detail_impacted']}/{linkedin['new_opportunities']} nuove opportunità "
-            f"({linkedin['impact_pct']:.1f}%)"
+            "LinkedIn: dettaglio non arricchito per "
+            f"{linkedin['detail_impacted']}/{linkedin['new_opportunities']} opportunità nuove nella ricerca; "
+            f"impatto sul risultato finale {linkedin['final_included_impacted']}/{linkedin['final_included']} offerte incluse"
         )
     elif linkedin_429:
         warnings.append(f"LinkedIn detail rate limit 429 ({linkedin_429})")
@@ -107,7 +135,8 @@ def main() -> None:
     print(
         f"RUN_HEALTH status={status} warnings={len(warnings)} source_errors={len(source_errors)} "
         f"linkedin_detail_impact={linkedin['detail_impacted']}/{linkedin['new_opportunities']} "
-        f"({linkedin['impact_pct']:.1f}%) zenrows_credits={total_credits}"
+        f"final_impact={linkedin['final_included_impacted']}/{linkedin['final_included']} "
+        f"zenrows_credits={total_credits}"
     )
 
 
