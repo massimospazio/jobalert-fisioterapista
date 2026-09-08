@@ -227,10 +227,14 @@ def collect(source_config: dict, locations: dict, known_opportunities: set[str] 
 
         for title, company, location, province, published, url, is_known in candidates:
             detail_text = ""
+            detail_status = "not_requested_known" if is_known else "not_requested"
+            detail_access_issue = False
             if is_known:
                 skipped_known += 1
             elif detail_blocked:
                 unattempted_after_block += 1
+                detail_status = "not_attempted_after_429"
+                detail_access_issue = True
             else:
                 detail_attempted += 1
                 try:
@@ -240,12 +244,20 @@ def collect(source_config: dict, locations: dict, known_opportunities: set[str] 
                         page.wait_for_timeout(400)
                         detail_text = _description_text(page.content())
                         detail_success += 1
+                        detail_status = "ok"
                     elif status == 429:
                         detail_429 += 1
                         detail_blocked = True
+                        detail_status = "rate_limited_429"
+                        detail_access_issue = True
+                    else:
+                        detail_status = f"http_{status}" if status else "no_response"
+                        detail_access_issue = True
                     print(f"LINKEDIN_DETAIL status={status or 'n/a'} description_bytes={len(detail_text)} url={url}")
                 except Exception as exc:
                     detail_errors += 1
+                    detail_status = "error"
+                    detail_access_issue = True
                     print(f"LINKEDIN_DETAIL_ERROR url={url} error={exc}")
 
             combined = _clean(f"{title} {company} {detail_text}")
@@ -273,6 +285,8 @@ def collect(source_config: dict, locations: dict, known_opportunities: set[str] 
                 cooperative="cooperativa" in f"{company} {detail_text}".lower(),
                 salary=salary,
                 salary_present=bool(salary),
+                detail_status=detail_status,
+                detail_access_issue=detail_access_issue,
             ))
 
         detail_impacted = max(0, new_candidates - detail_success)
