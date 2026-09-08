@@ -45,6 +45,22 @@ def _cell(value):
     return html.escape("" if value is None else str(value))
 
 
+def _detail_cell(job: dict) -> str:
+    status = job.get("detail_status") or "not_applicable"
+    issue = bool(job.get("detail_access_issue"))
+    labels = {
+        "ok": "OK",
+        "rate_limited_429": "⚠️ 429",
+        "not_attempted_after_429": "⚠️ non tentato dopo 429",
+        "error": "⚠️ errore",
+        "not_requested_known": "già noto",
+        "not_applicable": "—",
+    }
+    label = labels.get(status, status)
+    cls = " class='detail-issue'" if issue else ""
+    return f"<td{cls}>{_cell(label)}</td>"
+
+
 def _job_row(job: dict, is_new: bool) -> str:
     score = job.get("score")
     distance = job.get("distance_km")
@@ -56,7 +72,8 @@ def _job_row(job: dict, is_new: bool) -> str:
     return opening + "".join([
         f"<td>{_cell(score)}</td>", f"<td>{'' if distance is None else f'{distance:.1f} km'}</td>",
         f"<td>{_cell(job.get('location'))}</td>", f"<td>{_cell(job.get('company'))}</td>", f"<td>{title}</td>",
-        f"<td>{_cell(job.get('contract_type'))}</td>", f"<td>{_cell(job.get('published_at'))}</td>", f"<td>{_cell(job.get('source'))}</td>", "</tr>",
+        f"<td>{_cell(job.get('contract_type'))}</td>", f"<td>{_cell(job.get('published_at'))}</td>",
+        f"<td>{_cell(job.get('source'))}</td>", _detail_cell(job), "</tr>",
     ])
 
 
@@ -93,17 +110,22 @@ def main() -> None:
     run_label = "🟢 OK" if run_status == "OK" else "🟠 DEGRADED"
     issues = list(health.get("warnings") or []) + [f"{e.get('source')}: {e.get('message')}" for e in health.get("source_errors") or []]
     issues_text = " · ".join(_cell(x) for x in issues) or "nessun problema rilevato"
+    linkedin = health.get("linkedin") or {}
+    final_impact = (
+        f"{linkedin.get('final_included_impacted', 0)}/{linkedin.get('final_included', 0)} offerte LinkedIn incluse coinvolte"
+        if linkedin else "n/d"
+    )
     zr_sources = health.get("zenrows_by_source") or {}
     zr_detail = " · ".join(f"{_cell(name)} {item.get('credits', 0)} crediti" for name, item in zr_sources.items()) or "nessun consumo nel run"
     page = f"""<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Job Alert Fisioterapista</title>
-<style>body{{font-family:system-ui,-apple-system,sans-serif;margin:24px;background:#f6f7f9;color:#1f2937}} .wrap{{max-width:1400px;margin:auto}} .cards{{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:18px 0}} .card,.box{{background:white;padding:16px;border-radius:12px;box-shadow:0 1px 4px #0001}} .big{{font-size:28px;font-weight:700}} table{{width:100%;border-collapse:collapse;background:white}} th,td{{padding:10px;border-bottom:1px solid #e5e7eb;text-align:left}} th{{position:sticky;top:0;background:#111827;color:white}} tr.new{{background:#ecfdf5}} a{{color:#0369a1}} .meta{{color:#6b7280}} .box{{margin:12px 0;overflow:auto}}</style></head><body><div class="wrap">
+<style>body{{font-family:system-ui,-apple-system,sans-serif;margin:24px;background:#f6f7f9;color:#1f2937}} .wrap{{max-width:1500px;margin:auto}} .cards{{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:18px 0}} .card,.box{{background:white;padding:16px;border-radius:12px;box-shadow:0 1px 4px #0001}} .big{{font-size:28px;font-weight:700}} table{{width:100%;border-collapse:collapse;background:white}} th,td{{padding:10px;border-bottom:1px solid #e5e7eb;text-align:left}} th{{position:sticky;top:0;background:#111827;color:white}} tr.new{{background:#ecfdf5}} td.detail-issue{{background:#fff7ed;font-weight:600}} a{{color:#0369a1}} .meta{{color:#6b7280}} .box{{margin:12px 0;overflow:auto}}</style></head><body><div class="wrap">
 <h1>Job Alert Fisioterapista</h1><div class="meta">Ultimo aggiornamento: {generated}</div>
 <div class="cards"><div class="card"><div class="big">{len(baseline)}</div>offerte incluse</div><div class="card"><div class="big">{len(new_jobs)}</div>nuove</div><div class="card"><div class="big">{decisions.get('EXCLUDED',0)}</div>escluse</div><div class="card"><div class="big">{len(audit)}</div>record elaborati</div></div>
-<div class="box"><strong>Stato run:</strong> {run_label}<br><strong>Diagnostica:</strong> {issues_text}</div>
+<div class="box"><strong>Stato run:</strong> {run_label}<br><strong>Diagnostica:</strong> {issues_text}<br><strong>Impatto LinkedIn sul risultato finale:</strong> {_cell(final_impact)}</div>
 <div class="box"><strong>ZenRows:</strong> {zrisk}<br>Run corrente: {zr_detail} · totale {health.get('zenrows_run_credits', 0)} crediti<br>Usati: {zenrows['consumed']}/{zenrows['monthly_limit']} · residui: {zenrows['remaining']}<br>Stima fine mese con frequenza giornaliera: {zenrows['projected_consumed']}/{zenrows['monthly_limit']} ({zenrows['projected_pct']}%) · residui stimati: {zenrows['projected_remaining']}<br>Frequenza consigliata: {recommendation}</div>
 <div class="box"><strong>Fonti:</strong> {source_text}<br><strong>Esclusioni:</strong> {exclusion_text}</div>
-<div class="box"><strong>Legenda:</strong> righe verdi = nuove offerte nell'ultimo run.</div>
-<div style="overflow:auto"><table><thead><tr><th>Score</th><th>Distanza</th><th>Località</th><th>Azienda</th><th>Offerta</th><th>Contratto</th><th>Pubblicata</th><th>Fonte</th></tr></thead><tbody>{rows}</tbody></table></div>
+<div class="box"><strong>Legenda:</strong> righe verdi = nuove offerte nell'ultimo run · celle arancio nella colonna Dettaglio = problema di accesso alla pagina completa.</div>
+<div style="overflow:auto"><table><thead><tr><th>Score</th><th>Distanza</th><th>Località</th><th>Azienda</th><th>Offerta</th><th>Contratto</th><th>Pubblicata</th><th>Fonte</th><th>Dettaglio</th></tr></thead><tbody>{rows}</tbody></table></div>
 </div></body></html>"""
     DOCS.mkdir(parents=True, exist_ok=True)
     LATEST_HTML.write_text(page, encoding="utf-8")
