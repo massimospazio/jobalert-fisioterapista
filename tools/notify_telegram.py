@@ -33,7 +33,9 @@ def _short_job(job: dict) -> str:
     return " | ".join(bits)
 
 
-def _impact_label(pct: float) -> str:
+def _impact_label(pct: float, count: int) -> str:
+    if count == 0:
+        return "NULLO"
     if pct <= 10:
         return "BASSO"
     if pct <= 35:
@@ -80,13 +82,16 @@ def main() -> None:
     linkedin = health.get("linkedin") or {}
     impacted = int(linkedin.get("detail_impacted") or 0)
     new_linkedin = int(linkedin.get("new_opportunities") or 0)
-    impact_pct = float(linkedin.get("impact_pct") or 0)
+    raw_pct = float(linkedin.get("impact_pct") or 0)
+    final_impacted = int(linkedin.get("final_included_impacted") or 0)
+    final_included = int(linkedin.get("final_included") or 0)
+    final_pct = float(linkedin.get("final_impact_pct") or 0)
     if impacted:
         lines += [
             "",
-            f"LinkedIn — arricchimento DEGRADED: {impacted}/{new_linkedin} opportunità nuove nella ricerca senza pagina di dettaglio ({impact_pct:.1f}%) · impatto {_impact_label(impact_pct)}",
-            "Questa misura riguarda solo i dettagli LinkedIn e NON coincide con il numero di nuovi annunci notificati.",
-            "Titolo, azienda, località e data dalla card restano disponibili; i filtri vengono comunque applicati.",
+            f"LinkedIn — dettaglio: {impacted}/{new_linkedin} opportunità nuove nella ricerca non arricchite ({raw_pct:.1f}%).",
+            f"Impatto sul risultato finale: {final_impacted}/{final_included} offerte LinkedIn incluse coinvolte ({final_pct:.1f}%) · {_impact_label(final_pct, final_impacted)}.",
+            "Gli annunci con problemi di accesso al dettaglio sono marcati nel file offerte e nel report HTML.",
         ]
 
     issues = list(health.get("warnings") or [])
@@ -106,10 +111,7 @@ def main() -> None:
             f"Stima fine mese: {zr.get('projected_consumed', 0)}/{zr.get('monthly_limit', 5000)} ({zr.get('projected_pct', 0)}%)",
         ]
         every = int(zr.get("recommended_every_days") or 1)
-        if every > 1:
-            lines.append(f"⚠️ Frequenza consigliata: ogni {every} giorni")
-        else:
-            lines.append("Frequenza giornaliera sostenibile")
+        lines.append(f"⚠️ Frequenza consigliata: ogni {every} giorni" if every > 1 else "Frequenza giornaliera sostenibile")
 
     if new_jobs:
         lines += ["", "Nuove opportunità notificate:"]
