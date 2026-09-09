@@ -84,7 +84,7 @@
       "company": "S.M.E.C. SRLS",
       "location": "ANZIO",
       "province": "RM",
-      "published_at": "2026-09-07"
+      "published_at": "2026-09-08"
     },
     "87d54b07a2b2763878717aef": {
       "source": "bakeca",
@@ -300,6 +300,24 @@
       "location": "00182 Roma",
       "province": "RM",
       "published_at": null
+    },
+    "be394fa762364a8909f42b7a": {
+      "source": "LinkedIn",
+      "url": "https://it.linkedin.com/jobs/view/fisioterapista-domiciliare-m-f-at-medicasa-italia-4408268030",
+      "title": "Fisioterapista domiciliare (m/f)",
+      "company": "Medicasa Italia",
+      "location": "Fiano Romano",
+      "province": "RM",
+      "published_at": "2026-09-06"
+    },
+    "21158170c5c174956d92de9f": {
+      "source": "Indeed",
+      "url": "https://it.indeed.com/viewjob?jk=e603ffd5e5789a83",
+      "title": "Fisioterapista libero professionista",
+      "company": "Impresa Medica Srl",
+      "location": "00165 Roma",
+      "province": "RM",
+      "published_at": null
     }
   },
   "opportunities": {
@@ -336,6 +354,8 @@
     "62f8471e1b9cddd9b832b829": {},
     "4e7c3e283156da6f9b9ab6de": {},
     "205fdcaf196e52f4f7d96294": {},
-    "63cc173640c5c12420fe85a1": {}
+    "63cc173640c5c12420fe85a1": {},
+    "b471d0fd397bfe5a2124194e": {},
+    "2b29cf565c1e225e799d57d4": {}
   }
 }
