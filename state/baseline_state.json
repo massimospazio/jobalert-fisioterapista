@@ -97,7 +97,7 @@
       "company": "S.M.E.C. SRLS",
       "location": "MARINO",
       "province": "RM",
-      "published_at": "2026-09-02"
+      "published_at": "2026-09-09"
     },
     "9e24946d160843ca7ccfe7c7": {
       "source": "Bakeca",
@@ -318,6 +318,24 @@
       "location": "00165 Roma",
       "province": "RM",
       "published_at": null
+    },
+    "ed364590979daecdedfa50ff": {
+      "source": "LinkedIn",
+      "url": "https://it.linkedin.com/jobs/view/fisioterapista-at-move-poliambulatori-4311437844",
+      "title": "Fisioterapista",
+      "company": "MOVE POLIAMBULATORI",
+      "location": "Roma",
+      "province": "RM",
+      "published_at": "2026-09-09"
+    },
+    "966bec67b94f7b9694de7b4a": {
+      "source": "Indeed",
+      "url": "https://it.indeed.com/viewjob?jk=f04d9a8990f6c078",
+      "title": "Fisioterapista libero professionista",
+      "company": "Studio Medico Aloè",
+      "location": "00171 Roma",
+      "province": "RM",
+      "published_at": null
     }
   },
   "opportunities": {
@@ -356,6 +374,8 @@
     "205fdcaf196e52f4f7d96294": {},
     "63cc173640c5c12420fe85a1": {},
     "b471d0fd397bfe5a2124194e": {},
-    "2b29cf565c1e225e799d57d4": {}
+    "2b29cf565c1e225e799d57d4": {},
+    "3b510ceb7786efdbaf9d62af": {},
+    "45fbfbf2a31443bd27147055": {}
   }
 }

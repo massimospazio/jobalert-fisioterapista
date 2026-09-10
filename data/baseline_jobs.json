@@ -8,7 +8,7 @@
     "province": "RM",
     "latitude": 41.76984,
     "longitude": 12.65917,
-    "published_at": "2026-09-02",
+    "published_at": "2026-09-09",
     "application_deadline": null,
     "contract_type": "tempo_indeterminato",
     "employment_type": "full_time",
@@ -25,7 +25,7 @@
     "job_id": "e463c35be56d79632950ffe8",
     "score": 100,
     "distance_km": 4.230470689032693,
-    "raw_text": "1 FISIOTERAPISTA - MARINO (RM) Tempo indeterminato . Full time S.M.E.C. SRLS cerca per azienda leader nel settore Sanitario nella città di MARINO (RM), Fisioterapisti Professionali per la Riabilitaz … Azienda: S.M.E.C. SRLS 02/09/2026 Marino Candidati"
+    "raw_text": "1 Nuova selezione FISIOTERAPISTA - MARINO (RM) Tempo indeterminato . Full time S.M.E.C. SRLS cerca per azienda leader nel settore Sanitario nella città di MARINO (RM), Fisioterapisti Professionali per la Riabilitaz … Azienda: S.M.E.C. SRLS 09/09/2026 Marino Candidati"
   },
   {
     "source": "Bakeca",
@@ -53,7 +53,7 @@
     "job_id": "4d38f0aecc397a27c4039f14",
     "score": 92,
     "distance_km": 31.192204789296092,
-    "raw_text": "1 Nuova selezione FISIOTERAPISTA - ANZIO (RM) Tempo indeterminato . Full time S.ME.C. SRLS Cerca per azienda leader nel settore Sanitario nella città di ANZIO (RM), FISIOTERAPISTI da poter inserire stabilmente da … Azienda: S.M.E.C. SRLS 08/09/2026 Anzio Candidati"
+    "raw_text": "1 FISIOTERAPISTA - ANZIO (RM) Tempo indeterminato . Full time S.ME.C. SRLS Cerca per azienda leader nel settore Sanitario nella città di ANZIO (RM), FISIOTERAPISTI da poter inserire stabilmente da … Azienda: S.M.E.C. SRLS 08/09/2026 Anzio Candidati"
   },
   {
     "source": "Bakeca",
@@ -110,6 +110,34 @@
     "score": 70,
     "distance_km": 6.194566051188897,
     "raw_text": "Fisioterapista Centro di Riabilitazione \"Villaggio Eugenio Litta\""
+  },
+  {
+    "source": "LinkedIn",
+    "url": "https://it.linkedin.com/jobs/view/fisioterapista-at-move-poliambulatori-4311437844",
+    "title": "Fisioterapista",
+    "company": "MOVE POLIAMBULATORI",
+    "location": "Roma",
+    "province": "RM",
+    "latitude": 41.89193,
+    "longitude": 12.51133,
+    "published_at": "2026-09-09",
+    "application_deadline": null,
+    "contract_type": "collaborazione",
+    "employment_type": "non_specificato",
+    "piva_required": false,
+    "adi": false,
+    "homecare": true,
+    "homecare_only": false,
+    "cooperative": false,
+    "salary": "",
+    "salary_present": false,
+    "detail_status": "ok",
+    "detail_access_issue": false,
+    "opportunity_id": "3b510ceb7786efdbaf9d62af",
+    "job_id": "ed364590979daecdedfa50ff",
+    "score": 65,
+    "distance_km": 21.57327935239526,
+    "raw_text": "Fisioterapista MOVE POLIAMBULATORI 🩺 MOVE Poliambulatori cerca Fisioterapisti Siamo alla ricerca di un/una Fisioterapista da inserire nel nostro team per attività in sede e a domicilio. MOVE è un poliambulatorio medico giovane, dinamico e multidisciplinare, diventato negli anni una realtà di riferimento nel settore della fisioterapia e della riabilitazione nel Lazio. Crediamo nel lavoro di squadra, nella formazione continua e in un approccio al paziente che metta insieme competenza, ascolto e percorsi realmente personalizzati. IL RUOLO La risorsa si occuperà della valutazione e del trattamento di pazienti con differenti condizioni e necessità, attraverso: • valutazione funzionale del paziente; • definizione di piani di trattamento personalizzati; • tecniche di fisioterapia e riabilitazione; • monitoraggio dei progressi e degli obiettivi terapeutici; • attività fisioterapica anche a domicilio; • collaborazione con medici e altri professionisti sanitari del poliambulatorio. L'obiettivo è lavorare insieme per migliorare mobilità, autonomia e qualità della vita del paziente, attraverso un approccio multidisciplinare. CHI CERCHIAMO Cerchiamo una persona che abbia: 🎓 Formazione e abilitazione professionale come Fisioterapista 🩺 Competenze in fisioterapia, terapia fisica e riabilitazione 🤝 Attenzione alla cura e alla relazione con il paziente 🏠 Esperienza nell'assistenza domiciliare, considerata un plus 💬 Buone capacità comunicative e relazionali ⏱️ Capacità organizzative e di gestione del tempo 🚀 Voglia di crescere professionalmente e lavorare all'interno di un team giovane PERCHÉ MOVE? Non cerchiamo semplicemente un professionista a cui affidare dei pazienti. Cerchiamo qualcuno che voglia entrare a far parte di un progetto, confrontarsi quotidianamente con altri professionisti sanitari e crescere all'interno di uno studio medico strutturato e all'avanguardia nel panorama sanitario del Lazio. 📩 Vuoi entrare nel team MOVE? Inviaci il tuo CV 📲 Oppure contattaci su WhatsApp al 351 850 1460"
   },
   {
     "source": "LinkedIn",
@@ -222,34 +250,6 @@
     "score": 60,
     "distance_km": 21.57327935239526,
     "raw_text": "Fisioterapista Auxologico IRCCS"
-  },
-  {
-    "source": "LinkedIn",
-    "url": "https://it.linkedin.com/jobs/view/fisioterapista-domiciliare-m-f-at-medicasa-italia-4408268030",
-    "title": "Fisioterapista domiciliare (m/f)",
-    "company": "Medicasa Italia",
-    "location": "Fiano Romano",
-    "province": "RM",
-    "latitude": 42.15538,
-    "longitude": 12.59467,
-    "published_at": "2026-09-06",
-    "application_deadline": null,
-    "contract_type": "collaborazione",
-    "employment_type": "non_specificato",
-    "piva_required": false,
-    "adi": true,
-    "homecare": true,
-    "homecare_only": false,
-    "cooperative": false,
-    "salary": "",
-    "salary_present": false,
-    "detail_status": "ok",
-    "detail_access_issue": false,
-    "opportunity_id": "b471d0fd397bfe5a2124194e",
-    "job_id": "be394fa762364a8909f42b7a",
-    "score": 55,
-    "distance_km": 47.393038764975536,
-    "raw_text": "Fisioterapista domiciliare (m/f) Medicasa Italia Medicasa Italia S.p.A., established in 1993, is the Group Company specialised in the design and delivery of Home Assistance Services - ADI. Thanks to its widespread network it is active throughout Italy through 15 Operations Centres and over 1,500 collaborators. The company's mission is \"to take care and treat patients at home with expertise, ethics and devotion\", developing services increasingly closer to the patient's needs. How will you CONTRIBUTE and GROW? Garantire assistenza fisioterapica generale in risposta ai problemi di salute degli assistiti in carico a Medicasa. Elaborare ed attuare in via autonoma, o in collaborazione con altre figure sanitarie, gli interventi di prevenzione, cura e riabilitazione nelle aree della motricità, delle funzioni corticali superiori, e di quelle viscerali conseguenti a eventi patologici, a varia eziologia, congenita od acquisita. Garantire l'educazione sanitaria del Paziente; favorire e sostenere la partecipazione attiva nella determinazione delle decisioni terapeutiche. Territorio: Campagnano Romano Attuare interventi fisioterapici specifici, autonomi e complementari di natura tecnica, relazionale ed educativi in linea con le attività previste dal PAI; Assicurare l'attuazione delle attività assistenziali orientate alle esigenze dei pazienti considerando età, genere, condizioni di salute, fragilità fisiche/psichiche e tenendo conto delle specificità religiose etniche e linguistiche; Garantire e promuove l'educazione sanitaria e terapeutica all'Assistito e al care giver; Agire secondo le Linee Guide Internazionale e le Procedure definite da Medicasa; Garantire il corretto utilizzo dei materiali e dispositivi messi a disposizione da Medicasa e corretto stoccaggio a casa dell'Assistito; Identificare e pianificare gli obiettivi assistenziali; verificare il monitoraggio degli outcome clinici; Garantire la corretta tenuta della documentazione sanitaria ed amministrativa utlizzando la Cartella Clinica informatizzata; Identificare segni e sintomi rispetto alla situazione clinica assistenziale e rilevare eventuali fattori di rischio; Ottemperare alle responsabilità professionali di legge, agire secondo i principi propri dell'etica professionale e in maniera conforme al Codice Deontologico; Garantire la redazione delle relazioni sanitarie periodiche e se richieste dall'area sanitaria; Partecipare alle riunioni indette dalla centrale operativa, dai distretti sanitari; Garantire il costante aggiornamento professionale con l'acquisizione dei crediti ECM come previsto dalla normativa nazionale; Garantire la partecipazione ai corsi di formazione organizzati da Medicasa Are you a MATCH? Laurea professioni sanitarie della riabilitazione Iscrizione Ordini delle professioni sanitarie tecniche, della riabilitazione e della prevenzione In regola con i crediti ECM Our Differences make our Performance At Air Liquide, we are committed to build a diverse and inclusive workplace that embraces the diversity of our employees, our customers, patients, community stakeholders and cultures across the world. We welcome and consider applications from all qualified applicants, regardless of their background. We strongly believe a diverse organization opens up opportunities for people to express their talent, both individually and collectively and it helps foster our ability to innovate by living our fundamentals, acting for our success and creating an engaging environment in a changing world."
   },
   {
     "source": "Bakeca",
@@ -389,7 +389,7 @@
     "job_id": "978927ae45bb0eba448f4a75",
     "score": 50,
     "distance_km": null,
-    "raw_text": "Fisioterapista FISIOANIENE SRL 00159 Roma Orario flessibile Supporto allo sviluppo professionale Parcheggio libero Orario flessibile"
+    "raw_text": "Fisioterapista FISIOANIENE SRL 00159 Roma"
   },
   {
     "source": "Indeed",
@@ -533,6 +533,34 @@
   },
   {
     "source": "Indeed",
+    "url": "https://it.indeed.com/viewjob?jk=f04d9a8990f6c078",
+    "title": "Fisioterapista libero professionista",
+    "company": "Studio Medico Aloè",
+    "location": "00171 Roma",
+    "province": "RM",
+    "latitude": null,
+    "longitude": null,
+    "published_at": null,
+    "application_deadline": null,
+    "contract_type": "partita_iva",
+    "employment_type": "non_specificato",
+    "piva_required": true,
+    "adi": false,
+    "homecare": false,
+    "homecare_only": false,
+    "cooperative": false,
+    "salary": "",
+    "salary_present": false,
+    "detail_status": "not_applicable",
+    "detail_access_issue": false,
+    "opportunity_id": "45fbfbf2a31443bd27147055",
+    "job_id": "966bec67b94f7b9694de7b4a",
+    "score": 38,
+    "distance_km": null,
+    "raw_text": "Fisioterapista libero professionista Studio Medico Aloè 00171 Roma"
+  },
+  {
+    "source": "Indeed",
     "url": "https://it.indeed.com/viewjob?jk=46c0fea040f40ba7",
     "title": "Fisioterapista libero professionista",
     "company": "Fisiolistica 2000",
@@ -557,7 +585,7 @@
     "job_id": "ff0d67cb9d349a8fb47728cb",
     "score": 38,
     "distance_km": null,
-    "raw_text": "Fisioterapista libero professionista Fisiolistica 2000 00047 Marino Orario flessibile Orario flessibile"
+    "raw_text": "Fisioterapista libero professionista Fisiolistica 2000 00047 Marino"
   },
   {
     "source": "Bakeca",
