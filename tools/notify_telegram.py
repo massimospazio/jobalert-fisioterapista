@@ -97,7 +97,8 @@ def main() -> None:
     issues = list(health.get("warnings") or [])
     issues += [f"{e.get('source')}: {e.get('message')}" for e in health.get("source_errors") or []]
     if issues:
-        lines += ["", "⚠️ Diagnostica:"] + [f"• {item}" for item in issues[:4]]
+        diagnostic_label = "ℹ️ Diagnostica:" if health.get("status") == "OK" else "⚠️ Diagnostica:"
+        lines += ["", diagnostic_label] + [f"• {item}" for item in issues[:4]]
 
     zr = summary.get("zenrows") or {}
     run_sources = health.get("zenrows_by_source") or {}
