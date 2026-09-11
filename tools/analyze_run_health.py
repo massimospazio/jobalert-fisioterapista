@@ -117,7 +117,12 @@ def main() -> None:
 
     total_credits = sum(item.get("credits", 0) for item in zenrows_by_source.values())
     total_request_cost = sum(item.get("request_cost") or 0 for item in zenrows_by_source.values())
-    status = "DEGRADED" if source_errors or warnings else "OK"
+
+    # A detail-access problem is informational when it has no impact on any
+    # final included LinkedIn offer. DEGRADED is reserved for a real impact
+    # on the final result, or for source-level collection errors.
+    linkedin_affects_result = linkedin["final_included_impacted"] > 0
+    status = "DEGRADED" if source_errors or linkedin_affects_result else "OK"
 
     health = {
         "status": status,
