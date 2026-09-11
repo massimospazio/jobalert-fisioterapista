@@ -50,15 +50,22 @@ def _detail_cell(job: dict) -> str:
     issue = bool(job.get("detail_access_issue"))
     labels = {
         "ok": "OK",
+        "card_only": "SOLO CARD",
+        "card_only_no_description": "⚠️ SOLO CARD · descrizione non trovata",
+        "card_only_error": "⚠️ SOLO CARD · errore dettaglio",
         "rate_limited_429": "⚠️ 429",
         "not_attempted_after_429": "⚠️ NON TENTATO DOPO 429",
         "error": "⚠️ ERRORE",
         "not_requested_known": "NON NECESSARIO · già noto",
+        "not_requested_filtered": "NON RICHIESTO · già escluso dai filtri",
         "not_requested": "NON RICHIESTO",
         "not_applicable": "NON NECESSARIO",
         "no_response": "⚠️ NESSUNA RISPOSTA",
     }
-    label = labels.get(status, status.upper())
+    if status.startswith("card_only_http_"):
+        label = f"⚠️ SOLO CARD · HTTP {status.rsplit('_', 1)[-1]}"
+    else:
+        label = labels.get(status, status.upper())
     cls = " class='detail-issue'" if issue else ""
     return f"<td{cls}>{_cell(label)}</td>"
 
@@ -126,7 +133,7 @@ def main() -> None:
 <div class="box"><strong>Stato run:</strong> {run_label}<br><strong>Diagnostica:</strong> {issues_text}<br><strong>Impatto LinkedIn sul risultato finale:</strong> {_cell(final_impact)}</div>
 <div class="box"><strong>ZenRows:</strong> {zrisk}<br>Run corrente: {zr_detail} · totale {health.get('zenrows_run_credits', 0)} crediti<br>Usati: {zenrows['consumed']}/{zenrows['monthly_limit']} · residui: {zenrows['remaining']}<br>Stima fine mese con frequenza giornaliera: {zenrows['projected_consumed']}/{zenrows['monthly_limit']} ({zenrows['projected_pct']}%) · residui stimati: {zenrows['projected_remaining']}<br>Frequenza consigliata: {recommendation}</div>
 <div class="box"><strong>Fonti:</strong> {source_text}<br><strong>Esclusioni:</strong> {exclusion_text}</div>
-<div class="box"><strong>Legenda Dettaglio:</strong> OK = pagina completa letta · NON NECESSARIO = la fonte non richiede apertura del dettaglio · NON NECESSARIO · già noto = LinkedIn già presente nello state, dettaglio non riaperto · celle arancio = problema di accesso alla pagina completa.</div>
+<div class="box"><strong>Legenda Dettaglio:</strong> OK = pagina completa letta · SOLO CARD = disponibili solo i dati sintetici della ricerca · NON NECESSARIO = la fonte fornisce già i dati utili · NON NECESSARIO · già noto = annuncio già presente nello state e dettaglio non riaperto · celle arancio = dettaglio incompleto o problema di accesso.</div>
 <div class="box"><strong>Legenda offerte:</strong> righe verdi = nuove offerte nell'ultimo run.</div>
 <div style="overflow:auto"><table><thead><tr><th>Score</th><th>Distanza</th><th>Località</th><th>Azienda</th><th>Offerta</th><th>Contratto</th><th>Pubblicata</th><th>Fonte</th><th>Dettaglio</th></tr></thead><tbody>{rows}</tbody></table></div>
 </div></body></html>"""
