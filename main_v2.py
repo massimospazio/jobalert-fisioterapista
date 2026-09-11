@@ -1,7 +1,7 @@
 import csv
 import json
 import os
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from pathlib import Path
 
 from core.config import load_all
@@ -12,7 +12,7 @@ from core.scoring import score_job
 from core.state import load_state, merge_state, save_state_dict, stable_job_id
 from reports.audit import format_console_audit, write_audit
 from sources.bakeca import collect as collect_bakeca
-from sources.indeed import collect as collect_indeed
+from sources.indeed import collect as collect_indeed, enrich_detail as enrich_indeed_detail
 from sources.linkedin import collect as collect_linkedin
 from sources.ofi_lazio import collect as collect_ofi_lazio
 
@@ -141,8 +141,32 @@ def main() -> None:
             print("\nRACCOLTA FONTE: Indeed (gap filler)")
             try:
                 indeed_jobs, usage = collect_indeed(indeed_config, locations)
-                indeed_jobs = [enrich_job(job, locations) for job in indeed_jobs]
+                enriched_indeed = []
+                detail_attempted = detail_success = detail_card_only = 0
+                for job in indeed_jobs:
+                    job = enrich_job(job, locations)
+                    opp_id = opportunity_key(job)
+                    if opp_id in known_opportunities:
+                        job = replace(job, detail_status="not_requested_known", detail_access_issue=False)
+                    else:
+                        preliminary = evaluate_filters(job, filters_config)
+                        if preliminary.included:
+                            detail_attempted += 1
+                            job = enrich_indeed_detail(job)
+                            job = enrich_job(job, locations)
+                            if job.detail_status == "ok":
+                                detail_success += 1
+                            else:
+                                detail_card_only += 1
+                        else:
+                            job = replace(job, detail_status="not_requested_filtered", detail_access_issue=False)
+                    enriched_indeed.append(job)
+                indeed_jobs = enriched_indeed
                 all_jobs.extend(indeed_jobs)
+                print(
+                    f"INDEED_DETAIL_SUMMARY attempted={detail_attempted} success={detail_success} "
+                    f"card_only={detail_card_only} known_skipped={sum(1 for j in indeed_jobs if j.detail_status == 'not_requested_known')}"
+                )
                 print(f"INDEED_GAPFILL primary_unique={len(primary_unique)} collected={len(indeed_jobs)} request_cost={usage.get('request_cost', 'n/a')}")
             except Exception as exc:
                 print(f"SOURCE_ERROR indeed: {exc}")
