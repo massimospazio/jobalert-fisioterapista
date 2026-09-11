@@ -280,7 +280,7 @@
       "title": "Massaggiatore/massofisioterapista",
       "company": "MT Studio",
       "location": "00012 Guidonia",
-      "province": "",
+      "province": "RM",
       "published_at": null
     },
     "6af61bf8940fad92163dd1be": {
@@ -336,6 +336,15 @@
       "location": "00171 Roma",
       "province": "RM",
       "published_at": null
+    },
+    "91d823f3cdd32a33ba774d7a": {
+      "source": "Indeed",
+      "url": "https://it.indeed.com/viewjob?jk=88639312ba03ae02",
+      "title": "Fisioterapista",
+      "company": "Salus Center S.r.l.",
+      "location": "00149 Roma",
+      "province": "RM",
+      "published_at": null
     }
   },
   "opportunities": {
@@ -376,6 +385,7 @@
     "b471d0fd397bfe5a2124194e": {},
     "2b29cf565c1e225e799d57d4": {},
     "3b510ceb7786efdbaf9d62af": {},
-    "45fbfbf2a31443bd27147055": {}
+    "45fbfbf2a31443bd27147055": {},
+    "c692b8c773782e73c01f3c23": {}
   }
 }

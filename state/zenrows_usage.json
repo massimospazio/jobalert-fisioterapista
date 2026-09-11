@@ -1,7 +1,7 @@
 {
   "month": "2026-09",
   "monthly_limit": 5000,
-  "consumed": 1581,
+  "consumed": 1631,
   "snapshot_consumed": 1281,
   "snapshot_date": "2026-09-05",
   "requests": [
@@ -88,6 +88,20 @@
       "credits": 25,
       "request_cost": "0.025",
       "request_id": "6aa259dc6273681eb709180e07eaac08"
+    },
+    {
+      "timestamp_utc": "2026-09-11T07:18:33.979394+00:00",
+      "source": "Bakeca",
+      "credits": 25,
+      "request_cost": "0.025",
+      "request_id": "6aa3ab19aa489187e2250be79281b083"
+    },
+    {
+      "timestamp_utc": "2026-09-11T07:19:05.894416+00:00",
+      "source": "Indeed",
+      "credits": 25,
+      "request_cost": "0.025",
+      "request_id": "6aa3ab5226d7bbe0378e5083dfe01c67"
     }
   ]
 }
