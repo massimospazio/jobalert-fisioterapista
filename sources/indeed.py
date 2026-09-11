@@ -1,5 +1,6 @@
 import os
 import re
+from dataclasses import replace
 from datetime import date, timedelta
 from urllib.parse import parse_qs, urlencode, urljoin, urlsplit, urlunsplit
 
@@ -11,6 +12,10 @@ from core.zenrows_usage import record_success
 
 
 ZENROWS_ENDPOINT = "https://api.zenrows.com/v1/"
+DETAIL_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124 Safari/537.36",
+    "Accept-Language": "it-IT,it;q=0.9,en;q=0.7",
+}
 
 
 def _clean(text: str) -> str:
@@ -79,6 +84,37 @@ def _find_anchor(card):
     return card.select_one('h2.jobTitle a[data-jk], h2.jobTitle a[href], a[data-jk][href], a[href*="/viewjob"], a[href*="/rc/clk"]')
 
 
+def _detail_text(html: str) -> str:
+    soup = BeautifulSoup(html, "lxml")
+    for selector in ["#jobDescriptionText", ".jobsearch-JobComponent-description", "[data-testid='jobsearch-JobComponent-description']"]:
+        node = soup.select_one(selector)
+        if node:
+            text = _clean(node.get_text(" ", strip=True))
+            if text:
+                return text
+    return ""
+
+
+def enrich_detail(job: JobListing) -> JobListing:
+    """Try to enrich one Indeed card from the public detail page without ZenRows."""
+    try:
+        response = requests.get(job.url, headers=DETAIL_HEADERS, timeout=25, allow_redirects=True)
+        status = response.status_code
+        if status == 200:
+            detail = _detail_text(response.text or "")
+            if detail:
+                combined = _clean(f"{job.text} {detail}")
+                print(f"INDEED_DETAIL status=200 description_bytes={len(detail)} url={job.url}")
+                return replace(job, text=combined, detail_status="ok", detail_access_issue=False)
+            print(f"INDEED_DETAIL status=200 description_bytes=0 url={job.url}")
+            return replace(job, detail_status="card_only_no_description", detail_access_issue=True)
+        print(f"INDEED_DETAIL status={status} url={job.url}")
+        return replace(job, detail_status=f"card_only_http_{status}", detail_access_issue=True)
+    except Exception as exc:
+        print(f"INDEED_DETAIL_ERROR url={job.url} error={exc}")
+        return replace(job, detail_status="card_only_error", detail_access_issue=True)
+
+
 def collect(source_config: dict, locations: dict) -> tuple[list[JobListing], dict]:
     api_key = os.environ.get("ZENROWS_KEY")
     if not api_key:
@@ -119,7 +155,14 @@ def collect(source_config: dict, locations: dict) -> tuple[list[JobListing], dic
         location_node = card.select_one('[data-testid="text-location"], div.companyLocation, .company_location [data-testid="text-location"]')
         company = _clean(company_node.get_text(" ", strip=True)) if company_node else ""
         location = _clean(location_node.get_text(" ", strip=True)) if location_node else ""
-        jobs.append(JobListing(source=source_config.get("name", "Indeed"), url=url, title=title, text=raw, company=company, location=location, published_at=_published(raw), adi=bool(re.search(r"\badi\b", f"{title} {raw}".lower())), homecare=_homecare(f"{title} {raw}"), homecare_only=_homecare_only(title, raw), cooperative="cooperativa" in f"{company} {raw}".lower()))
+        jobs.append(JobListing(
+            source=source_config.get("name", "Indeed"), url=url, title=title, text=raw,
+            company=company, location=location, published_at=_published(raw),
+            adi=bool(re.search(r"\badi\b", f"{title} {raw}".lower())),
+            homecare=_homecare(f"{title} {raw}"), homecare_only=_homecare_only(title, raw),
+            cooperative="cooperativa" in f"{company} {raw}".lower(),
+            detail_status="card_only", detail_access_issue=False,
+        ))
         seen.add(identity)
         if len(jobs) >= limit:
             break
