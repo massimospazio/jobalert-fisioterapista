@@ -80,19 +80,34 @@ def main() -> None:
             lines.append("Nuovi per fonte: " + " · ".join(f"{name} {count}" for name, count in sorted(new_by_source.items())))
 
     linkedin = health.get("linkedin") or {}
-    impacted = int(linkedin.get("detail_impacted") or 0)
-    new_linkedin = int(linkedin.get("new_opportunities") or 0)
-    raw_pct = float(linkedin.get("impact_pct") or 0)
-    final_impacted = int(linkedin.get("final_included_impacted") or 0)
-    final_included = int(linkedin.get("final_included") or 0)
-    final_pct = float(linkedin.get("final_impact_pct") or 0)
-    if impacted:
+    li_impacted = int(linkedin.get("detail_impacted") or 0)
+    li_new = int(linkedin.get("new_opportunities") or 0)
+    li_raw_pct = float(linkedin.get("impact_pct") or 0)
+    li_final_impacted = int(linkedin.get("final_included_impacted") or 0)
+    li_final_included = int(linkedin.get("final_included") or 0)
+    li_final_pct = float(linkedin.get("final_impact_pct") or 0)
+    if li_impacted:
         lines += [
             "",
-            f"LinkedIn — dettaglio: {impacted}/{new_linkedin} opportunità nuove nella ricerca non arricchite ({raw_pct:.1f}%).",
-            f"Impatto sul risultato finale: {final_impacted}/{final_included} offerte LinkedIn incluse coinvolte ({final_pct:.1f}%) · {_impact_label(final_pct, final_impacted)}.",
-            "Gli annunci con problemi di accesso al dettaglio sono marcati nel file offerte e nel report HTML.",
+            f"LinkedIn — dettaglio: {li_impacted}/{li_new} opportunità nuove nella ricerca non arricchite ({li_raw_pct:.1f}%).",
+            f"Impatto sul risultato finale: {li_final_impacted}/{li_final_included} offerte LinkedIn incluse coinvolte ({li_final_pct:.1f}%) · {_impact_label(li_final_pct, li_final_impacted)}.",
         ]
+
+    indeed = health.get("indeed") or {}
+    in_attempted = int(indeed.get("attempted") or 0)
+    in_card_only = int(indeed.get("card_only") or 0)
+    in_final_impacted = int(indeed.get("final_included_impacted") or 0)
+    in_final_included = int(indeed.get("final_included") or 0)
+    in_final_pct = float(indeed.get("final_impact_pct") or 0)
+    if in_card_only:
+        lines += [
+            "",
+            f"Indeed — dettaglio: {in_card_only}/{in_attempted} pagine tentate non acquisite; offerte mantenute come SOLO CARD.",
+            f"Impatto sul risultato finale: {in_final_impacted}/{in_final_included} offerte Indeed incluse coinvolte ({in_final_pct:.1f}%) · {_impact_label(in_final_pct, in_final_impacted)}.",
+        ]
+
+    if li_impacted or in_card_only:
+        lines.append("Gli annunci con problemi di accesso al dettaglio sono marcati nel file offerte e nel report HTML.")
 
     issues = list(health.get("warnings") or [])
     issues += [f"{e.get('source')}: {e.get('message')}" for e in health.get("source_errors") or []]
