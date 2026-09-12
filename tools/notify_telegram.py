@@ -43,6 +43,16 @@ def _impact_label(pct: float, count: int) -> str:
     return "ALTO"
 
 
+def _exclusion_label(rule: str) -> str:
+    labels = {
+        "homecare_only": "solo domiciliare/ADI",
+        "cooperative": "cooperativa",
+        "province_not_allowed": "fuori provincia RM",
+        "missing_positive_match": "ruolo non pertinente",
+    }
+    return labels.get(rule, rule.replace("_", " "))
+
+
 def main() -> None:
     token = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
     chat_id = os.environ.get("TELEGRAM_CHAT_ID", "").strip()
@@ -78,6 +88,11 @@ def main() -> None:
         if new_jobs:
             new_by_source = Counter((job.get("source") or "sconosciuta") for job in new_jobs)
             lines.append("Nuovi per fonte: " + " · ".join(f"{name} {count}" for name, count in sorted(new_by_source.items())))
+        exclusions = summary.get("exclusion_rules") or {}
+        if exclusions:
+            ranked = sorted(exclusions.items(), key=lambda item: (-int(item[1]), item[0]))
+            lines.append("Motivi esclusione*: " + " · ".join(f"{_exclusion_label(rule)} {count}" for rule, count in ranked))
+            lines.append("*Una stessa offerta può avere più motivi di esclusione.")
 
     linkedin = health.get("linkedin") or {}
     li_impacted = int(linkedin.get("detail_impacted") or 0)
