@@ -345,6 +345,33 @@
       "location": "00149 Roma",
       "province": "RM",
       "published_at": null
+    },
+    "af2df16516c314f15deca31f": {
+      "source": "LinkedIn",
+      "url": "https://it.linkedin.com/jobs/view/fisioterapista-at-fisiosipu%C3%B2-studio-di-fisioterapia-e-riabilitazione-4466048744",
+      "title": "Fisioterapista",
+      "company": "FisioSiPuò - Studio di Fisioterapia e Riabilitazione",
+      "location": "Roma",
+      "province": "RM",
+      "published_at": "2026-09-11"
+    },
+    "999b10a5b4780224be6591c7": {
+      "source": "Indeed",
+      "url": "https://it.indeed.com/viewjob?jk=e02b0a7c59f3154b",
+      "title": "Fisioterapista - M/F M/F",
+      "company": "Clariane",
+      "location": "00079 Rocca Priora",
+      "province": "",
+      "published_at": null
+    },
+    "7d0ccfc3315c101c5c37d26c": {
+      "source": "Indeed",
+      "url": "https://it.indeed.com/viewjob?jk=3d529d977034fb12",
+      "title": "AREA RIABILITATIVA - FISIOTERAPISTA M/F",
+      "company": "Clariane",
+      "location": "Roma, Lazio",
+      "province": "RM",
+      "published_at": null
     }
   },
   "opportunities": {
@@ -386,6 +413,9 @@
     "2b29cf565c1e225e799d57d4": {},
     "3b510ceb7786efdbaf9d62af": {},
     "45fbfbf2a31443bd27147055": {},
-    "c692b8c773782e73c01f3c23": {}
+    "c692b8c773782e73c01f3c23": {},
+    "ef0d9b1a1be284fbe7f7e61a": {},
+    "0774c0d8e27f5873cb8e5a5f": {},
+    "6394800bccffb54242468a91": {}
   }
 }
