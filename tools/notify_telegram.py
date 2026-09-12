@@ -19,17 +19,18 @@ def _load(path: Path, default):
         return default
 
 
-def _short_job(job: dict) -> str:
+def _short_job(job: dict, include_score: bool = True) -> str:
     title = job.get("title") or "Fisioterapista"
     company = job.get("company") or "Azienda non indicata"
     location = job.get("location") or "Località non indicata"
-    score = job.get("score")
-    distance = job.get("distance_km")
     bits = [f"• {title} — {company} — {location}"]
-    if score is not None:
-        bits.append(f"score {score}")
-    if distance is not None:
-        bits.append(f"{distance:.1f} km")
+    if include_score:
+        score = job.get("score")
+        distance = job.get("distance_km")
+        if score is not None:
+            bits.append(f"score {score}")
+        if distance is not None:
+            bits.append(f"{distance:.1f} km")
     return " | ".join(bits)
 
 
@@ -53,9 +54,50 @@ def _exclusion_label(rule: str) -> str:
     return labels.get(rule, rule.replace("_", " "))
 
 
+def _send(token: str, chat_id: str, text: str) -> None:
+    response = requests.post(
+        f"https://api.telegram.org/bot{token}/sendMessage",
+        json={"chat_id": chat_id, "text": text, "disable_web_page_preview": True},
+        timeout=30,
+    )
+    response.raise_for_status()
+
+
+def _concise_message(summary: dict, new_jobs: list[dict], report_url: str) -> str:
+    lines = ["📋 Job Alert Fisioterapista"]
+    sources = summary.get("source_counts") or {}
+    if sources:
+        lines += ["", "Portali esaminati: " + " · ".join(f"{name} {count}" for name, count in sorted(sources.items()))]
+
+    excluded = int(summary.get("excluded", 0) or 0)
+    included = int(summary.get("included", 0) or 0)
+    total = int(summary.get("raw_audit_records", 0) or 0)
+    lines += [f"Offerte elaborate: {total}", f"Escluse: {excluded}", f"Offerte utili: {included}", f"Nuove: {len(new_jobs)}"]
+
+    exclusions = summary.get("exclusion_rules") or {}
+    if exclusions:
+        ranked = sorted(exclusions.items(), key=lambda item: (-int(item[1]), item[0]))
+        lines.append("Motivi esclusione*: " + " · ".join(f"{_exclusion_label(rule)} {count}" for rule, count in ranked))
+        lines.append("*Una stessa offerta può avere più motivi.")
+
+    if new_jobs:
+        lines += ["", "🆕 Nuove offerte:"]
+        for job in new_jobs[:5]:
+            lines.append(_short_job(job, include_score=False))
+        if len(new_jobs) > 5:
+            lines.append(f"+ {len(new_jobs) - 5} altre")
+    else:
+        lines += ["", "Nessuna nuova offerta oggi."]
+
+    if report_url:
+        lines += ["", f"Report completo: {report_url}"]
+    return "\n".join(lines)
+
+
 def main() -> None:
     token = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
     chat_id = os.environ.get("TELEGRAM_CHAT_ID", "").strip()
+    luisa_chat_id = os.environ.get("TELEGRAM_CHAT_ID_LUISA", "").strip()
     if not token or not chat_id:
         print("TELEGRAM_SKIPPED configuration_missing")
         return
@@ -155,9 +197,14 @@ def main() -> None:
     if report_url:
         lines.append(f"Report HTML: {report_url}")
 
-    response = requests.post(f"https://api.telegram.org/bot{token}/sendMessage", json={"chat_id": chat_id, "text": "\n".join(lines), "disable_web_page_preview": True}, timeout=30)
-    response.raise_for_status()
-    print(f"TELEGRAM_SENT status={label} new_jobs={len(new_jobs)}")
+    _send(token, chat_id, "\n".join(lines))
+    print(f"TELEGRAM_SENT_FULL status={label} new_jobs={len(new_jobs)}")
+
+    if luisa_chat_id:
+        _send(token, luisa_chat_id, _concise_message(summary, new_jobs, report_url))
+        print(f"TELEGRAM_SENT_LUISA new_jobs={len(new_jobs)}")
+    else:
+        print("TELEGRAM_LUISA_SKIPPED configuration_missing")
 
 
 if __name__ == "__main__":
