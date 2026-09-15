@@ -381,6 +381,15 @@
       "location": "00177 Roma",
       "province": "RM",
       "published_at": null
+    },
+    "88724b5f099217db82da50d3": {
+      "source": "Bakeca",
+      "url": "https://roma.bakeca.it/dettaglio/medicina-salute-assistenza/cerco-fisioterapisti-con-p-iva-per-collaborazione-kzxg299344538",
+      "title": "cerco fisioterapisti con p iva per collaborazione",
+      "company": "Associazione",
+      "location": "Roma",
+      "province": "RM",
+      "published_at": "2026-09-14"
     }
   },
   "opportunities": {
@@ -425,6 +434,7 @@
     "c692b8c773782e73c01f3c23": {},
     "ef0d9b1a1be284fbe7f7e61a": {},
     "0774c0d8e27f5873cb8e5a5f": {},
-    "6394800bccffb54242468a91": {}
+    "6394800bccffb54242468a91": {},
+    "a14e473489dbe0890119277f": {}
   }
 }
