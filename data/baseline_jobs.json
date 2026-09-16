@@ -36,7 +36,7 @@
     "province": "RM",
     "latitude": 41.45263,
     "longitude": 12.62157,
-    "published_at": "2026-09-08",
+    "published_at": "2026-09-15",
     "application_deadline": null,
     "contract_type": "tempo_indeterminato",
     "employment_type": "full_time",
@@ -53,7 +53,7 @@
     "job_id": "4d38f0aecc397a27c4039f14",
     "score": 92,
     "distance_km": 31.192204789296092,
-    "raw_text": "1 FISIOTERAPISTA - ANZIO (RM) Tempo indeterminato . Full time S.ME.C. SRLS Cerca per azienda leader nel settore Sanitario nella città di ANZIO (RM), FISIOTERAPISTI da poter inserire stabilmente da … Azienda: S.M.E.C. SRLS 08/09/2026 Anzio Candidati"
+    "raw_text": "1 Nuova selezione FISIOTERAPISTA - ANZIO (RM) Tempo indeterminato . Full time S.ME.C. SRLS Cerca per azienda leader nel settore Sanitario nella città di ANZIO (RM), FISIOTERAPISTI da poter inserire stabilmente da … Azienda: S.M.E.C. SRLS 15/09/2026 Anzio Candidati"
   },
   {
     "source": "Bakeca",
@@ -82,34 +82,6 @@
     "score": 85,
     "distance_km": 21.57327935239526,
     "raw_text": "Cercasi Fisioterapisti Tempo indeterminato . Turni Lo Studio Fisioterapico Morgagni sito in Roma a Via Castro dei Volsci 34 (fermata metro Arco di Travertino) ricerca urgentemente Fisiot … Azienda: Studio Fisioterapico Morgagni Srl 01/09/2026 Roma Candidati"
-  },
-  {
-    "source": "LinkedIn",
-    "url": "https://it.linkedin.com/jobs/view/fisioterapista-at-centro-di-riabilitazione-villaggio-eugenio-litta-3762487118",
-    "title": "Fisioterapista",
-    "company": "Centro di Riabilitazione \"Villaggio Eugenio Litta\"",
-    "location": "Grottaferrata",
-    "province": "RM",
-    "latitude": 41.78664,
-    "longitude": 12.67144,
-    "published_at": "2026-08-31",
-    "application_deadline": null,
-    "contract_type": "non_specificato",
-    "employment_type": "non_specificato",
-    "piva_required": false,
-    "adi": false,
-    "homecare": false,
-    "homecare_only": false,
-    "cooperative": false,
-    "salary": "",
-    "salary_present": false,
-    "detail_status": "not_requested_known",
-    "detail_access_issue": false,
-    "opportunity_id": "3efdb49d58e05f114fd40a1e",
-    "job_id": "c243ed6c06247d271b86fba3",
-    "score": 70,
-    "distance_km": 6.194566051188897,
-    "raw_text": "Fisioterapista Centro di Riabilitazione \"Villaggio Eugenio Litta\""
   },
   {
     "source": "LinkedIn",
@@ -305,7 +277,7 @@
     "job_id": "88724b5f099217db82da50d3",
     "score": 54,
     "distance_km": 21.57327935239526,
-    "raw_text": "1 Nuova selezione cerco fisioterapisti con p iva per collaborazione Libero professionista (o Partita IVA) . Part time Salve cerco fisioterapisti per lavorare con p iva Roma studio associato o fisioterapista a cui piace lavorare e viaggiare in barca … Azienda: Associazione 14/09/2026 Roma Candidati"
+    "raw_text": "1 cerco fisioterapisti con p iva per collaborazione Libero professionista (o Partita IVA) . Part time Salve cerco fisioterapisti per lavorare con p iva Roma studio associato o fisioterapista a cui piace lavorare e viaggiare in barca … Azienda: Associazione 14/09/2026 Roma Candidati"
   },
   {
     "source": "OFI Lazio",
@@ -418,6 +390,34 @@
     "score": 50,
     "distance_km": null,
     "raw_text": "Fisioterapista FISIOANIENE SRL 00159 Roma"
+  },
+  {
+    "source": "Indeed",
+    "url": "https://it.indeed.com/viewjob?jk=e02b0a7c59f3154b",
+    "title": "Fisioterapista - M/F M/F",
+    "company": "Clariane",
+    "location": "00079 Rocca Priora",
+    "province": "",
+    "latitude": null,
+    "longitude": null,
+    "published_at": null,
+    "application_deadline": null,
+    "contract_type": "non_specificato",
+    "employment_type": "non_specificato",
+    "piva_required": false,
+    "adi": false,
+    "homecare": false,
+    "homecare_only": false,
+    "cooperative": false,
+    "salary": "",
+    "salary_present": false,
+    "detail_status": "not_requested_known",
+    "detail_access_issue": false,
+    "opportunity_id": "0774c0d8e27f5873cb8e5a5f",
+    "job_id": "999b10a5b4780224be6591c7",
+    "score": 50,
+    "distance_km": null,
+    "raw_text": "Fisioterapista - M/F M/F Clariane 00079 Rocca Priora"
   },
   {
     "source": "OFI Lazio",
