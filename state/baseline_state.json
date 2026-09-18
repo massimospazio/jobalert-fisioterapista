@@ -390,6 +390,15 @@
       "location": "Roma",
       "province": "RM",
       "published_at": "2026-09-14"
+    },
+    "9e443adb357279f2d90343e1": {
+      "source": "Indeed",
+      "url": "https://it.indeed.com/viewjob?jk=080f4166d0b749c2",
+      "title": "Massoterapista, Osteopata, Fisioterapista, operatori Olistici",
+      "company": "ShapeMe Srl",
+      "location": "Roma, Lazio",
+      "province": "RM",
+      "published_at": null
     }
   },
   "opportunities": {
@@ -435,6 +444,7 @@
     "ef0d9b1a1be284fbe7f7e61a": {},
     "0774c0d8e27f5873cb8e5a5f": {},
     "6394800bccffb54242468a91": {},
-    "a14e473489dbe0890119277f": {}
+    "a14e473489dbe0890119277f": {},
+    "fba6c5deb9eadefb54ca53ba": {}
   }
 }

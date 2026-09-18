@@ -25,7 +25,7 @@
     "job_id": "e463c35be56d79632950ffe8",
     "score": 100,
     "distance_km": 4.230470689032693,
-    "raw_text": "1 Nuova selezione FISIOTERAPISTA - MARINO (RM) Tempo indeterminato . Full time S.M.E.C. SRLS cerca per azienda leader nel settore Sanitario nella città di MARINO (RM), Fisioterapisti Professionali per la Riabilitaz … Azienda: S.M.E.C. SRLS 16/09/2026 Marino Candidati"
+    "raw_text": "1 FISIOTERAPISTA - MARINO (RM) Tempo indeterminato . Full time S.M.E.C. SRLS cerca per azienda leader nel settore Sanitario nella città di MARINO (RM), Fisioterapisti Professionali per la Riabilitaz … Azienda: S.M.E.C. SRLS 16/09/2026 Marino Candidati"
   },
   {
     "source": "Bakeca",
@@ -138,34 +138,6 @@
     "score": 60,
     "distance_km": 21.57327935239526,
     "raw_text": "Fisioterapista FisioSiPuò - Studio di Fisioterapia e Riabilitazione"
-  },
-  {
-    "source": "LinkedIn",
-    "url": "https://it.linkedin.com/jobs/view/fisioterapista-at-marilab-4459156043",
-    "title": "Fisioterapista",
-    "company": "Marilab",
-    "location": "Roma",
-    "province": "RM",
-    "latitude": 41.89193,
-    "longitude": 12.51133,
-    "published_at": "2026-09-03",
-    "application_deadline": null,
-    "contract_type": "non_specificato",
-    "employment_type": "non_specificato",
-    "piva_required": false,
-    "adi": false,
-    "homecare": false,
-    "homecare_only": false,
-    "cooperative": false,
-    "salary": "",
-    "salary_present": false,
-    "detail_status": "not_requested_known",
-    "detail_access_issue": false,
-    "opportunity_id": "0af954b5b5368733cbfcfb0f",
-    "job_id": "51001a15e5dd1e3d8d78cb0f",
-    "score": 60,
-    "distance_km": 21.57327935239526,
-    "raw_text": "Fisioterapista Marilab"
   },
   {
     "source": "LinkedIn",
@@ -393,9 +365,9 @@
   },
   {
     "source": "Indeed",
-    "url": "https://it.indeed.com/viewjob?jk=3d529d977034fb12",
-    "title": "AREA RIABILITATIVA - FISIOTERAPISTA M/F",
-    "company": "Clariane",
+    "url": "https://it.indeed.com/viewjob?jk=080f4166d0b749c2",
+    "title": "Massoterapista, Osteopata, Fisioterapista, operatori Olistici",
+    "company": "ShapeMe Srl",
     "location": "Roma, Lazio",
     "province": "RM",
     "latitude": null,
@@ -411,13 +383,13 @@
     "cooperative": false,
     "salary": "",
     "salary_present": false,
-    "detail_status": "not_requested_known",
-    "detail_access_issue": false,
-    "opportunity_id": "6394800bccffb54242468a91",
-    "job_id": "7d0ccfc3315c101c5c37d26c",
+    "detail_status": "card_only_http_401",
+    "detail_access_issue": true,
+    "opportunity_id": "fba6c5deb9eadefb54ca53ba",
+    "job_id": "9e443adb357279f2d90343e1",
     "score": 50,
     "distance_km": null,
-    "raw_text": "AREA RIABILITATIVA - FISIOTERAPISTA M/F Clariane Roma, Lazio"
+    "raw_text": "Massoterapista, Osteopata, Fisioterapista, operatori Olistici ShapeMe Srl Roma, Lazio"
   },
   {
     "source": "OFI Lazio",
