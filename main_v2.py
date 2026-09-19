@@ -16,7 +16,6 @@ from sources.indeed import collect as collect_indeed, enrich_detail as enrich_in
 from sources.linkedin import collect as collect_linkedin
 from sources.ofi_lazio import collect as collect_ofi_lazio
 
-
 STATE_PATH = "state/baseline_state.json"
 NEW_JOBS_PATH = "logs/new_jobs.json"
 BASELINE_JSON_PATH = "data/baseline_jobs.json"
@@ -26,7 +25,8 @@ BASELINE_COLUMNS = [
     "source", "title", "company", "location", "province", "homecare", "homecare_only",
     "published_at", "application_deadline", "contract_type", "employment_type", "cooperative",
     "salary", "piva_required", "adi", "salary_present", "detail_status", "detail_access_issue",
-    "latitude", "longitude", "url", "score", "distance_km", "opportunity_id", "job_id", "raw_text",
+    "verification_status", "last_verified_at", "latitude", "longitude", "url", "score", "distance_km",
+    "opportunity_id", "job_id", "raw_text",
 ]
 
 
@@ -82,6 +82,29 @@ def _write_baseline(items: list[dict]) -> tuple[Path, Path]:
     return json_path, csv_path
 
 
+def _previous_baseline() -> list[dict]:
+    try:
+        data = json.loads(Path(BASELINE_JSON_PATH).read_text(encoding="utf-8"))
+        return data if isinstance(data, list) else []
+    except (OSError, ValueError):
+        return []
+
+
+def preserve_unverified(previous: list[dict], current: list[dict], failed_sources: set[str]) -> list[dict]:
+    """Keep prior included offers from failed sources without treating them as newly collected."""
+    existing = {job.get("opportunity_id") or job.get("job_id") for job in current}
+    retained = []
+    for job in previous:
+        if job.get("source", "").lower().replace(" ", "_") not in failed_sources:
+            continue
+        identity = job.get("opportunity_id") or job.get("job_id")
+        if not identity or identity in existing:
+            continue
+        retained.append({**job, "verification_status": "not_reverified", "last_verified_at": job.get("last_verified_at")})
+        existing.add(identity)
+    return retained
+
+
 def _coverage(items) -> dict[str, tuple[int, int]]:
     total = len(items)
     checks = {
@@ -103,6 +126,8 @@ def _print_coverage(items) -> None:
 
 
 def main() -> None:
+    from datetime import datetime, timezone
+
     config = load_all()
     settings = config["settings"]
     filters_config = config["filters"]
@@ -110,8 +135,11 @@ def main() -> None:
     locations = config["locations"].get("locations", {})
     output_dir = settings.get("audit", {}).get("output_dir", "logs")
     baseline_state = load_state(STATE_PATH)
+    previous_baseline = _previous_baseline()
     known_ids = set(baseline_state.get("jobs", {}).keys())
     known_opportunities = set(baseline_state.get("opportunities", {}).keys())
+    failed_sources = set()
+    collection_date = datetime.now(timezone.utc).isoformat()
 
     source_configs = config["sources"].get("sources", [])
     sources = [source for source in source_configs if source.get("enabled") and source.get("id") != "indeed"]
@@ -126,6 +154,7 @@ def main() -> None:
             print(f"Annunci raccolti: {len(jobs)}")
             all_jobs.extend(jobs)
         except Exception as exc:
+            failed_sources.add(source.get("name", source_id).lower().replace(" ", "_"))
             print(f"SOURCE_ERROR {source_id}: {exc}")
 
     primary_unique, primary_duplicates = deduplicate_jobs(all_jobs)
@@ -136,6 +165,7 @@ def main() -> None:
         if not _truthy_env("ALLOW_PAID_SOURCES"):
             print("SOURCE_SKIPPED_PAID indeed: ALLOW_PAID_SOURCES non attivo")
         elif not indeed_config:
+            failed_sources.add("indeed")
             print("SOURCE_ERROR indeed: configurazione non trovata")
         else:
             print("\nRACCOLTA FONTE: Indeed (gap filler)")
@@ -169,6 +199,7 @@ def main() -> None:
                 )
                 print(f"INDEED_GAPFILL primary_unique={len(primary_unique)} collected={len(indeed_jobs)} request_cost={usage.get('request_cost', 'n/a')}")
             except Exception as exc:
+                failed_sources.add("indeed")
                 print(f"SOURCE_ERROR indeed: {exc}")
     else:
         print("INDEED_GAPFILL_SKIPPED ENABLE_INDEED_GAPFILL non attivo")
@@ -198,6 +229,8 @@ def main() -> None:
             included_jobs.append(job_dict)
             included_opportunity_ids.append(opp_id)
             payload = _job_payload(job, score_result, opp_id, job_id)
+            payload["verification_status"] = "verified"
+            payload["last_verified_at"] = collection_date
             baseline_output.append(payload)
             if state_status == "NEW":
                 new_included += 1
@@ -208,6 +241,10 @@ def main() -> None:
         print(format_console_audit(job, filter_result, score_result))
         audit_file = write_audit(job, filter_result, score_result, output_dir)
 
+    retained = preserve_unverified(previous_baseline, baseline_output, failed_sources)
+    if retained:
+        baseline_output.extend(retained)
+        print(f"STALE_OFFERS_RETAINED count={len(retained)} sources={','.join(sorted(failed_sources))}")
     sort_key = lambda item: (-(item.get("score") or 0), item.get("distance_km") or 9999)
     new_jobs_output.sort(key=sort_key)
     baseline_output.sort(key=sort_key)
@@ -216,7 +253,7 @@ def main() -> None:
     baseline_files = None
     if _truthy_env("PERSIST_BASELINE_DATA"):
         baseline_files = _write_baseline(baseline_output)
-        print(f"BASELINE_EXPORT count={len(baseline_output)} json={baseline_files[0]} csv={baseline_files[1]}")
+        print(f"BASELINE_EXPORT count={len(baseline_output)} verified={len(baseline_output)-len(retained)} not_reverified={len(retained)} json={baseline_files[0]} csv={baseline_files[1]}")
     else:
         print("BASELINE_EXPORT_SKIPPED PERSIST_BASELINE_DATA non attivo")
 
@@ -225,7 +262,7 @@ def main() -> None:
         save_state_dict(updated_state, STATE_PATH)
 
     print("\n" + "=" * 72)
-    print(f"RACCOLTI RAW: {len(all_jobs)} | OPPORTUNITA UNICHE: {len(unique_jobs)} | DUPLICATI: {duplicate_count} | INCLUSI: {included} | ESCLUSI: {excluded} | NUOVI INCLUSI: {new_included} | GIA NOTI: {known_included}")
+    print(f"RACCOLTI RAW: {len(all_jobs)} | OPPORTUNITA UNICHE: {len(unique_jobs)} | DUPLICATI: {duplicate_count} | INCLUSI: {included} | ESCLUSI: {excluded} | NUOVI INCLUSI: {new_included} | GIA NOTI: {known_included} | NON RIVERIFICATI: {len(retained)}")
     if audit_file:
         print(f"Audit JSONL: {audit_file}")
     print(f"Nuovi annunci JSON: {new_jobs_file}")
