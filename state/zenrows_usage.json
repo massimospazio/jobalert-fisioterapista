@@ -1,7 +1,7 @@
 {
   "month": "2026-09",
   "monthly_limit": 5000,
-  "consumed": 1981,
+  "consumed": 2006,
   "snapshot_consumed": 1281,
   "snapshot_date": "2026-09-05",
   "requests": [
@@ -200,6 +200,13 @@
       "credits": 25,
       "request_cost": "0.025",
       "request_id": "6aace5ba403de4f997ebb21e5d0b230a"
+    },
+    {
+      "timestamp_utc": "2026-09-19T07:15:20.490000+00:00",
+      "source": "Bakeca",
+      "credits": 25,
+      "request_cost": "0.025",
+      "request_id": "6aae367bca9849872c28b9063dd86677"
     }
   ]
 }
