@@ -77,13 +77,32 @@ def _job_row(job: dict, is_new: bool) -> str:
     title = _cell(job.get("title") or "Fisioterapista")
     if url:
         title = f'<a href="{html.escape(url, quote=True)}" target="_blank" rel="noopener">{title}</a>'
-    opening = "<tr class='new'>" if is_new else "<tr>"
+    stale = job.get("verification_status") == "not_reverified"
+    opening = "<tr class='stale'>" if stale else "<tr class='new'>" if is_new else "<tr>"
+    verification = "⚠️ NON RIVERIFICATA" if stale else "Verificata nel run"
     return opening + "".join([
         f"<td>{_cell(score)}</td>", f"<td>{'' if distance is None else f'{distance:.1f} km'}</td>",
-        f"<td>{_cell(job.get('location'))}</td>", f"<td>{_cell(job.get('company'))}</td>", f"<td>{title}</td>",
-        f"<td>{_cell(job.get('contract_type'))}</td>", f"<td>{_cell(job.get('published_at'))}</td>",
-        f"<td>{_cell(job.get('source'))}</td>", _detail_cell(job), "</tr>",
+        f"<td>{_cell(job.get('location'))}</td>", f"<td>{_cell(job.get('company'))}</td>",
+        f"<td>{title}</td>", f"<td>{_cell(job.get('contract_type'))}</td>",
+        f"<td>{_cell(job.get('published_at'))}</td>", f"<td>{_cell(job.get('source'))}</td>",
+        f"<td>{verification}</td>", _detail_cell(job), "</tr>",
     ])
+
+
+def _source_display(source_counts: Counter, source_errors: list[dict], stale: list[dict]) -> str:
+    failed = {str(error.get('source') or '').strip().lower(): str(error.get('message') or '') for error in source_errors}
+    retained = Counter(str(job.get('source') or '').lower() for job in stale)
+    names = set(source_counts) | {name for name in failed if name} | {job.get('source') for job in stale if job.get('source')}
+    names.discard(None)
+    entries = []
+    for name in sorted(names, key=str.lower):
+        key = str(name).lower()
+        count = source_counts.get(name, 0)
+        if key in failed:
+            entries.append(f"<strong>{_cell(name)}: ERRORE</strong> — {_cell(failed[key])}; {count} elaborati, {retained.get(key, 0)} offerte conservate, non riverificate")
+        else:
+            entries.append(f"{_cell(name)}: {count} elaborati")
+    return "<br>".join(entries) or "n/d"
 
 
 def main() -> None:
@@ -91,6 +110,7 @@ def main() -> None:
     new_jobs = _load_json(NEW_JOBS, [])
     health = _load_json(RUN_HEALTH, {"status": "OK", "warnings": [], "source_errors": [], "zenrows_by_source": {}})
     audit = _audit_records()
+    stale = [job for job in baseline if job.get("verification_status") == "not_reverified"]
     new_ids = {j.get("job_id") for j in new_jobs}
     decisions = Counter(r.get("decision") for r in audit)
     exclusions = Counter()
@@ -103,14 +123,14 @@ def main() -> None:
     summary = {
         "generated_at_utc": datetime.now(timezone.utc).isoformat(), "raw_audit_records": len(audit),
         "included": decisions.get("INCLUDED", 0), "excluded": decisions.get("EXCLUDED", 0), "new": len(new_jobs),
-        "baseline_count": len(baseline), "source_counts": dict(source_counts), "exclusion_rules": dict(exclusions),
-        "zenrows": zenrows, "health": health,
+        "baseline_count": len(baseline), "not_reverified": len(stale), "source_counts": dict(source_counts),
+        "exclusion_rules": dict(exclusions), "zenrows": zenrows, "health": health,
     }
     SUMMARY_JSON.parent.mkdir(parents=True, exist_ok=True)
     SUMMARY_JSON.write_text(json.dumps(summary, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
     rows = "".join(_job_row(job, job.get("job_id") in new_ids) for job in baseline)
-    source_text = " · ".join(f"{_cell(k)}: {v}" for k, v in sorted(source_counts.items())) or "n/d"
+    source_text = _source_display(source_counts, health.get("source_errors") or [], stale)
     exclusion_text = " · ".join(f"{_cell(k)}: {v}" for k, v in sorted(exclusions.items())) or "nessuna"
     generated = datetime.now().astimezone().strftime("%d/%m/%Y %H:%M")
     zrisk = {"SAFE":"🟢 SAFE","WARNING":"🟠 ATTENZIONE","RISK":"🔴 RISCHIO"}.get(zenrows["risk"], zenrows["risk"])
@@ -126,20 +146,22 @@ def main() -> None:
     )
     zr_sources = health.get("zenrows_by_source") or {}
     zr_detail = " · ".join(f"{_cell(name)} {item.get('credits', 0)} crediti" for name, item in zr_sources.items()) or "nessun consumo nel run"
+    stale_notice = (f"<div class='box'><strong>⚠️ Copertura parziale:</strong> {len(stale)} offerte conservate dall'ultima acquisizione riuscita e NON riverificate. Potrebbero essere scadute o modificate. I record elaborati e le nuove offerte riguardano esclusivamente le fonti acquisite nel run corrente.</div>" if stale else "")
     page = f"""<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Job Alert Fisioterapista</title>
-<style>body{{font-family:system-ui,-apple-system,sans-serif;margin:24px;background:#f6f7f9;color:#1f2937}} .wrap{{max-width:1500px;margin:auto}} .cards{{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:18px 0}} .card,.box{{background:white;padding:16px;border-radius:12px;box-shadow:0 1px 4px #0001}} .big{{font-size:28px;font-weight:700}} table{{width:100%;border-collapse:collapse;background:white}} th,td{{padding:10px;border-bottom:1px solid #e5e7eb;text-align:left}} th{{position:sticky;top:0;background:#111827;color:white}} tr.new{{background:#ecfdf5}} td.detail-issue{{background:#fff7ed;font-weight:600}} a{{color:#0369a1}} .meta{{color:#6b7280}} .box{{margin:12px 0;overflow:auto}}</style></head><body><div class="wrap">
+<style>body{{font-family:system-ui,-apple-system,sans-serif;margin:24px;background:#f6f7f9;color:#1f2937}} .wrap{{max-width:1500px;margin:auto}} .cards{{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:18px 0}} .card,.box{{background:white;padding:16px;border-radius:12px;box-shadow:0 1px 4px #0001}} .big{{font-size:28px;font-weight:700}} table{{width:100%;border-collapse:collapse;background:white}} th,td{{padding:10px;border-bottom:1px solid #e5e7eb;text-align:left}} th{{position:sticky;top:0;background:#111827;color:white}} tr.new{{background:#ecfdf5}} tr.stale{{background:#fff7ed}} td.detail-issue{{background:#fff7ed;font-weight:600}} a{{color:#0369a1}} .meta{{color:#6b7280}} .box{{margin:12px 0;overflow:auto}}</style></head><body><div class="wrap">
 <h1>Job Alert Fisioterapista</h1><div class="meta">Ultimo aggiornamento: {generated}</div>
-<div class="cards"><div class="card"><div class="big">{len(baseline)}</div>offerte incluse</div><div class="card"><div class="big">{len(new_jobs)}</div>nuove</div><div class="card"><div class="big">{decisions.get('EXCLUDED',0)}</div>escluse</div><div class="card"><div class="big">{len(audit)}</div>record elaborati</div></div>
+<div class="cards"><div class="card"><div class="big">{len(baseline)}</div>offerte visualizzate ({len(stale)} non riverificate)</div><div class="card"><div class="big">{len(new_jobs)}</div>nuove tra le fonti disponibili</div><div class="card"><div class="big">{decisions.get('EXCLUDED',0)}</div>escluse</div><div class="card"><div class="big">{len(audit)}</div>record elaborati nel run</div></div>
 <div class="box"><strong>Stato run:</strong> {run_label}<br><strong>Diagnostica:</strong> {issues_text}<br><strong>Impatto LinkedIn sul risultato finale:</strong> {_cell(final_impact)}</div>
-<div class="box"><strong>ZenRows:</strong> {zrisk}<br>Run corrente: {zr_detail} · totale {health.get('zenrows_run_credits', 0)} crediti<br>Usati: {zenrows['consumed']}/{zenrows['monthly_limit']} · residui: {zenrows['remaining']}<br>Stima fine mese con frequenza giornaliera: {zenrows['projected_consumed']}/{zenrows['monthly_limit']} ({zenrows['projected_pct']}%) · residui stimati: {zenrows['projected_remaining']}<br>Frequenza consigliata: {recommendation}</div>
-<div class="box"><strong>Fonti:</strong> {source_text}<br><strong>Esclusioni:</strong> {exclusion_text}</div>
+{stale_notice}
+<div class="box"><strong>ZenRows:</strong> {zrisk}<br>Run corrente: {zr_detail} · totale nominale {health.get('zenrows_run_credits', 0)} crediti (verificare l'addebito in caso di richiesta fallita)<br>Usati: {zenrows['consumed']}/{zenrows['monthly_limit']} · residui: {zenrows['remaining']}<br>Stima fine mese con frequenza giornaliera: {zenrows['projected_consumed']}/{zenrows['monthly_limit']} ({zenrows['projected_pct']}%) · residui stimati: {zenrows['projected_remaining']}<br>Frequenza consigliata: {recommendation}</div>
+<div class="box"><strong>Fonti — raccolta corrente:</strong><br>{source_text}<br><strong>Esclusioni:</strong> {exclusion_text}</div>
 <div class="box"><strong>Legenda Dettaglio:</strong> OK = pagina completa letta · SOLO CARD = disponibili solo i dati sintetici della ricerca · NON NECESSARIO = la fonte fornisce già i dati utili · NON NECESSARIO · già noto = annuncio già presente nello state e dettaglio non riaperto · celle arancio = dettaglio incompleto o problema di accesso.</div>
-<div class="box"><strong>Legenda offerte:</strong> righe verdi = nuove offerte nell'ultimo run.</div>
-<div style="overflow:auto"><table><thead><tr><th>Score</th><th>Distanza</th><th>Località</th><th>Azienda</th><th>Offerta</th><th>Contratto</th><th>Pubblicata</th><th>Fonte</th><th>Dettaglio</th></tr></thead><tbody>{rows}</tbody></table></div>
+<div class="box"><strong>Legenda offerte:</strong> righe verdi = nuove offerte nell'ultimo run · righe arancio = offerte da run precedenti, non riverificate perché la fonte non era disponibile.</div>
+<div style="overflow:auto"><table><thead><tr><th>Score</th><th>Distanza</th><th>Località</th><th>Azienda</th><th>Offerta</th><th>Contratto</th><th>Pubblicata</th><th>Fonte</th><th>Verifica</th><th>Dettaglio</th></tr></thead><tbody>{rows}</tbody></table></div>
 </div></body></html>"""
     DOCS.mkdir(parents=True, exist_ok=True)
     LATEST_HTML.write_text(page, encoding="utf-8")
-    print(f"REPORT_HTML path={LATEST_HTML} jobs={len(baseline)} new={len(new_jobs)} run_status={run_status} zenrows_risk={zenrows['risk']} projected={zenrows['projected_consumed']}/{zenrows['monthly_limit']}")
+    print(f"REPORT_HTML path={LATEST_HTML} jobs={len(baseline)} not_reverified={len(stale)} new={len(new_jobs)} run_status={run_status} zenrows_risk={zenrows['risk']} projected={zenrows['projected_consumed']}/{zenrows['monthly_limit']}")
 
 
 if __name__ == "__main__":
